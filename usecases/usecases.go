@@ -20,7 +20,7 @@ type UserInterface interface {
 	LoginToAccount(login, password string) (string, error)
 
 	GetMyLinks(a Account) ([]string, error)
-	CreateSnippet(a *Account, cs CodeSnippet) (string, error)
+	CreateSnippet(a *Account, code string, lang *string, lifetime time.Duration) (string, error)
 	GetSnippetById(string) (CodeSnippet, error)
 }
 
@@ -44,9 +44,9 @@ func (User) GetMyLinks(a Account) ([]string, error) {
 	return []string{"a", "b", "c"}, nil
 }
 
-func (User) CreateSnippet(a *Account, cs CodeSnippet) (string, error) {
+func (User) CreateSnippet(a *Account, code string, lang *string, lifetime time.Duration) (string, error) {
 	// TODO
-	fmt.Printf("CrateLink: %s %s", a.Id, cs.Code)
+	fmt.Printf("CreateLink: %s %s", a.Id, code)
 	return "id", nil
 }
 

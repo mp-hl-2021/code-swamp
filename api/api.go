@@ -26,8 +26,8 @@ func (a *Api) Router() http.Handler {
 	router.HandleFunc("/signup", a.postSignup).Methods(http.MethodPost)
 	router.HandleFunc("/signin", a.postSignin).Methods(http.MethodPost)
 
-	router.HandleFunc("/myswamp", a.getLinks).Methods(http.MethodGet)
-	router.HandleFunc("/", a.postCode).Methods(http.MethodPut)
+	router.HandleFunc("/myswamp", a.postLinks).Methods(http.MethodPost)
+	router.HandleFunc("/", a.postCode).Methods(http.MethodPost)
 
 	router.HandleFunc("/{snippet_id}", a.getCode).Methods(http.MethodGet)
 	router.HandleFunc("/{snippet_id}/download", a.getCodeFile).Methods(http.MethodGet)
@@ -83,12 +83,12 @@ func (a *Api) postSignin(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
-type getLinksRequestModel struct {
+type postLinksRequestModel struct {
 	token string
 }
 
-func (a *Api) getLinks(w http.ResponseWriter, r *http.Request) {
-	var m getLinksRequestModel
+func (a *Api) postLinks(w http.ResponseWriter, r *http.Request) {
+	var m postLinksRequestModel
 	if err := json.NewDecoder(r.Body).Decode(&m); err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		return
@@ -136,7 +136,7 @@ func (a *Api) postCode(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	id, err := a.UseCases.CreateSnippet(acc, usecases.CodeSnippet{Code: m.code, Lang: m.lang, Lifetime: m.lifetime})
+	id, err := a.UseCases.CreateSnippet(acc, m.code, m.lang, m.lifetime)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		return
@@ -152,11 +152,11 @@ func (a *Api) postCode(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *Api) getCode(w http.ResponseWriter, _ *http.Request) {
-	// TODO
+	// TODO: generate snippet id by url.
 	w.WriteHeader(http.StatusOK)
 }
 
 func (a *Api) getCodeFile(w http.ResponseWriter, _ *http.Request) {
-	// TODO
+	// TODO: generate snippet id by url.
 	w.WriteHeader(http.StatusOK)
 }
