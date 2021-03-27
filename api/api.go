@@ -35,11 +35,6 @@ func (a *Api) Router() http.Handler {
 	return router
 }
 
-func tokenToAccount(token string) (usecases.Account, error) {
-	// TODO
-	return usecases.Account{Id: "0"}, nil
-}
-
 type postSignupRequestModel struct {
 	Login    string
 	Password string
@@ -93,8 +88,7 @@ func (a *Api) postLinks(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
-
-	acc, err := tokenToAccount(m.token)
+	acc, err := a.UseCases.GetAccountByToken(m.token)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		return
@@ -129,7 +123,7 @@ func (a *Api) postCode(w http.ResponseWriter, r *http.Request) {
 
 	var acc *usecases.Account = nil
 	if m.token != nil {
-		a, err := tokenToAccount(*m.token)
+		a, err := a.UseCases.GetAccountByToken(*m.token)
 		acc = &a
 		if err != nil {
 			w.WriteHeader(http.StatusBadRequest)
