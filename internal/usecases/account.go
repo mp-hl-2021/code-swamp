@@ -3,12 +3,11 @@ package usecases
 import (
 	"errors"
 	"fmt"
-	accountstorage "github.com/mp-hl-2021/code-swamp/accountStorage"
+	"github.com/mp-hl-2021/code-swamp/internal/domain/repository"
 	"unicode"
 
 	"golang.org/x/crypto/bcrypt"
 
-	"github.com/mp-hl-2021/code-swamp/auth"
 	"time"
 )
 
@@ -54,11 +53,11 @@ type AccountInterface interface {
 }
 
 type User struct{
-	Auth auth.Interface
-	AccountStorage accountstorage.Interface
+	Auth           Interface
+	AccountStorage repository.Interface
 }
 
-func (u* User) CreateAccount(login, password string) (Account, error) {
+func (u*User) CreateAccount(login, password string) (Account, error) {
 	fmt.Printf("Register: %s %s\n", login, password)
 	if err := validateLogin(login); err != nil {
 		return Account{}, err
@@ -72,7 +71,7 @@ func (u* User) CreateAccount(login, password string) (Account, error) {
 		return Account{}, err
 	}
 
-	acc, err := u.AccountStorage.CreateAccount(accountstorage.Credentials{
+	acc, err := u.AccountStorage.CreateAccount(repository.Credentials{
 		Login: login,
 		Password: string(hashedPassword),
 	})
@@ -82,7 +81,7 @@ func (u* User) CreateAccount(login, password string) (Account, error) {
 	return Account{Id: acc.Id}, nil
 }
 
-func (u* User) LoginToAccount(login, password string) (string, error) {
+func (u*User) LoginToAccount(login, password string) (string, error) {
 	fmt.Printf("Login: %s %s\n", login, password)
 	if err := validateLogin(login); err != nil {
 		return "", err

@@ -1,10 +1,10 @@
-package api
+package httpapi
 
 import (
 	"encoding/json"
 	"fmt"
 	"github.com/gorilla/mux"
-	"github.com/mp-hl-2021/code-swamp/usecases"
+	"github.com/mp-hl-2021/code-swamp/internal/usecases"
 	"net/http"
 	"strings"
 	"time"

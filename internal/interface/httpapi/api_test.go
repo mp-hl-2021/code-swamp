@@ -1,10 +1,10 @@
-package api
+package httpapi
 
 import (
 	"bytes"
 	"encoding/json"
 	"errors"
-	"github.com/mp-hl-2021/code-swamp/usecases"
+	"github.com/mp-hl-2021/code-swamp/internal/usecases"
 	"net/http"
 	"net/http/httptest"
 	"testing"

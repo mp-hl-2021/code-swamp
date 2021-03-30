@@ -3,10 +3,9 @@ package main
 import (
 	"flag"
 	"fmt"
-	accountstorage "github.com/mp-hl-2021/code-swamp/accountStorage"
-	"github.com/mp-hl-2021/code-swamp/api"
-	"github.com/mp-hl-2021/code-swamp/auth"
-	"github.com/mp-hl-2021/code-swamp/usecases"
+	"github.com/mp-hl-2021/code-swamp/internal/interface"
+	"github.com/mp-hl-2021/code-swamp/internal/interface/httpapi"
+	"github.com/mp-hl-2021/code-swamp/internal/usecases"
 	"io/ioutil"
 	"net/http"
 	"time"
@@ -20,17 +19,17 @@ func main() {
 	privateKeyBytes, err := ioutil.ReadFile(*privateKeyPath)
 	publicKeyBytes, err := ioutil.ReadFile(*publicKeyPath)
 
-	a, err := auth.NewJwt(privateKeyBytes, publicKeyBytes, 100*time.Minute)
+	a, err := _interface.NewJwt(privateKeyBytes, publicKeyBytes, 100*time.Minute)
 	if err != nil {
 		panic(err)
 	}
 
 	user := &usecases.User{
-		AccountStorage: accountstorage.NewMemory(),
-		Auth: a,
+		AccountStorage: _interface.NewMemory(),
+		Auth:           a,
 	}
 
-	service := api.NewApi(user)
+	service := httpapi.NewApi(user)
 
 	addr := "localhost:8080"
 	server := http.Server{
