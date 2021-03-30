@@ -59,6 +59,7 @@ type User struct{
 }
 
 func (u* User) CreateAccount(login, password string) (Account, error) {
+	fmt.Printf("Register: %s %s\n", login, password)
 	if err := validateLogin(login); err != nil {
 		return Account{}, err
 	}
@@ -78,19 +79,17 @@ func (u* User) CreateAccount(login, password string) (Account, error) {
 	if err != nil {
 		return Account{}, err
 	}
-	fmt.Printf("Register: %s %s", login, password)
 	return Account{Id: acc.Id}, nil
 }
 
 func (u* User) LoginToAccount(login, password string) (string, error) {
+	fmt.Printf("Login: %s %s\n", login, password)
 	if err := validateLogin(login); err != nil {
 		return "", err
 	}
 	if err := validatePassword(password); err != nil {
 		return "", err
 	}
-
-	fmt.Printf("Login: %s %s", login, password)
 	acc, err := u.AccountStorage.GetAccountByLogin(login)
 	if err != nil {
 		return "", ErrInvalidLogin
@@ -133,7 +132,7 @@ func (u User) GetAccountByToken(token string) (Account, error)  {
 
 func validateLogin(login string) error {
 	chars := 0
-	if unicode.IsLetter([]rune(login)[0]) {
+	if !unicode.IsLetter([]rune(login)[0]) {
 		return ErrInvalidLoginString2
 	}
 	for _, r := range login {
@@ -164,7 +163,7 @@ func validatePassword(password string) error {
 			lower = 1
 		}
 
-		if unicode.IsTitle(r) {
+		if unicode.IsUpper(r) {
 			upper = 1
 		}
 
