@@ -11,12 +11,12 @@ import (
 )
 
 type Api struct {
-	UseCases usecases.UserInterface
+	AccountUseCases usecases.AccountInterface
 }
 
-func NewApi(u usecases.UserInterface) *Api {
+func NewApi(u usecases.AccountInterface) *Api {
 	return &Api{
-		UseCases: u,
+		AccountUseCases: u,
 	}
 }
 
@@ -47,9 +47,25 @@ func (a *Api) postSignup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, err := a.UseCases.CreateAccount(m.Login, m.Password)
-	if err != nil { // TODO: map domain errors to http error codes
-		w.WriteHeader(http.StatusInternalServerError)
+	_, err := a.AccountUseCases.CreateAccount(m.Login, m.Password)
+	if err != nil {
+		var statusCode int
+		switch err {
+		case
+			usecases.ErrInvalidLoginString,
+			usecases.ErrInvalidLoginString2,
+			usecases.ErrInvalidPasswordString,
+			usecases.ErrTooShortString,
+			usecases.ErrTooLongString,
+			usecases.ErrNoDigits,
+			usecases.ErrNoUpperCaseLetters,
+			usecases.ErrNoLowerCaseLetters:
+
+			statusCode = http.StatusBadRequest
+		default:
+			statusCode = http.StatusInternalServerError
+		}
+		w.WriteHeader(statusCode)
 		fmt.Println(err)
 		return
 	}
@@ -64,9 +80,20 @@ func (a *Api) postSignin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	token, err := a.UseCases.LoginToAccount(m.Login, m.Password)
+	token, err := a.AccountUseCases.LoginToAccount(m.Login, m.Password)
 	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
+		var statusCode int
+		switch err {
+
+		case
+			usecases.ErrInvalidLogin,
+			usecases.ErrInvalidPassword:
+
+			statusCode = http.StatusUnauthorized
+		default:
+			statusCode = http.StatusBadRequest
+		}
+		w.WriteHeader(statusCode)
 		return
 	}
 
@@ -88,13 +115,13 @@ func (a *Api) postLinks(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	acc, err := a.UseCases.GetAccountByToken(m.token)
+	acc, err := a.AccountUseCases.GetAccountByToken(m.token)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
-	links, err := a.UseCases.GetMyLinks(acc)
+	links, err := a.AccountUseCases.GetMyLinks(acc)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		return
@@ -123,14 +150,14 @@ func (a *Api) postCode(w http.ResponseWriter, r *http.Request) {
 
 	var acc *usecases.Account = nil
 	if m.token != nil {
-		a, err := a.UseCases.GetAccountByToken(*m.token)
+		a, err := a.AccountUseCases.GetAccountByToken(*m.token)
 		acc = &a
 		if err != nil {
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
 	}
-	id, err := a.UseCases.CreateSnippet(acc, m.code, m.lang, m.lifetime)
+	id, err := a.AccountUseCases.CreateSnippet(acc, m.code, m.lang, m.lifetime)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		return

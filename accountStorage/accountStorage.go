@@ -8,7 +8,7 @@ var (
 )
 
 type Account struct {
-	Id string
+	Id uint
 	Credentials
 }
 
@@ -19,6 +19,6 @@ type Credentials struct {
 
 type Interface interface {
 	CreateAccount(cred Credentials) (Account, error)
-	GetAccountById(id string) (Account, error)
+	GetAccountById(id uint) (Account, error)
 	GetAccountByLogin(login string) (Account, error)
 }

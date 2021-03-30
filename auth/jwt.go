@@ -18,7 +18,7 @@ type Jwt struct {
 }
 
 type Claims struct {
-	Id string
+	Id uint
 	jwt.StandardClaims
 }
 
@@ -38,7 +38,7 @@ func NewJwt(privateBytes, publicBytes []byte, keyExpiration time.Duration) (*Jwt
 	}, nil
 }
 
-func (j Jwt) IssueToken(userId string) (string, error) {
+func (j Jwt) IssueToken(userId uint) (string, error) {
 	claims := Claims{
 		Id: userId,
 		StandardClaims: jwt.StandardClaims{
@@ -49,7 +49,7 @@ func (j Jwt) IssueToken(userId string) (string, error) {
 	return token.SignedString(j.privateKey)
 }
 
-func (j Jwt) UserIdByToken(tokenString string) (string, error) {
+func (j Jwt) UserIdByToken(tokenString string) (uint, error) {
 	token, err := jwt.ParseWithClaims(tokenString, &Claims{}, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodRSA); !ok {
 			return nil, fmt.Errorf("unexpected token signing method")
@@ -57,11 +57,11 @@ func (j Jwt) UserIdByToken(tokenString string) (string, error) {
 		return j.publicKey, nil
 	})
 	if err != nil {
-		return "", err
+		return 0, err
 	}
 	claims, ok := token.Claims.(*Claims)
 	if !ok {
-		return "", errors.New("invalid token claims")
+		return 0, errors.New("invalid token claims")
 	}
 	return claims.Id, nil
 }

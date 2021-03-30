@@ -34,7 +34,7 @@ const (
 )
 
 type Account struct {
-	Id string
+	Id uint
 }
 
 type CodeSnippet struct {
@@ -43,7 +43,7 @@ type CodeSnippet struct {
 	Lifetime time.Duration
 }
 
-type UserInterface interface {
+type AccountInterface interface {
 	CreateAccount(login, password string) (Account, error)
 	LoginToAccount(login, password string) (string, error)
 
@@ -58,10 +58,28 @@ type User struct{
 	AccountStorage accountstorage.Interface
 }
 
-func (User) CreateAccount(login, password string) (Account, error) {
-	// TODO
+func (u* User) CreateAccount(login, password string) (Account, error) {
+	if err := validateLogin(login); err != nil {
+		return Account{}, err
+	}
+	if err := validatePassword(password); err != nil {
+		return Account{}, err
+	}
+
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	if err != nil {
+		return Account{}, err
+	}
+
+	acc, err := u.AccountStorage.CreateAccount(accountstorage.Credentials{
+		Login: login,
+		Password: string(hashedPassword),
+	})
+	if err != nil {
+		return Account{}, err
+	}
 	fmt.Printf("Register: %s %s", login, password)
-	return Account{Id: "0"}, nil
+	return Account{Id: acc.Id}, nil
 }
 
 func (u* User) LoginToAccount(login, password string) (string, error) {
@@ -75,10 +93,10 @@ func (u* User) LoginToAccount(login, password string) (string, error) {
 	fmt.Printf("Login: %s %s", login, password)
 	acc, err := u.AccountStorage.GetAccountByLogin(login)
 	if err != nil {
-		return "", err
+		return "", ErrInvalidLogin
 	}
 	if err := bcrypt.CompareHashAndPassword([]byte(acc.Credentials.Password), []byte(password)); err != nil {
-		return "", err
+		return "", ErrInvalidPassword
 	}
 
 	token, err := u.Auth.IssueToken(acc.Id)
