@@ -10,7 +10,7 @@ import (
 )
 
 // todo: key rotation
-type Jwt struct {
+type JwtHandler struct {
 	publicKey  *rsa.PublicKey
 	privateKey *rsa.PrivateKey
 
@@ -22,7 +22,7 @@ type Claims struct {
 	jwt.StandardClaims
 }
 
-func NewJwt(privateBytes, publicBytes []byte, keyExpiration time.Duration) (*Jwt, error) {
+func NewJwt(privateBytes, publicBytes []byte, keyExpiration time.Duration) (*JwtHandler, error) {
 	privateKey, err := jwt.ParseRSAPrivateKeyFromPEM(privateBytes)
 	if err != nil {
 		return nil, err
@@ -31,14 +31,14 @@ func NewJwt(privateBytes, publicBytes []byte, keyExpiration time.Duration) (*Jwt
 	if err != nil {
 		return nil, err
 	}
-	return &Jwt{
+	return &JwtHandler{
 		publicKey:  publicKey,
 		privateKey: privateKey,
 		expire:     keyExpiration,
 	}, nil
 }
 
-func (j Jwt) IssueToken(userId uint) (string, error) {
+func (j JwtHandler) IssueToken(userId uint) (string, error) {
 	claims := Claims{
 		Id: userId,
 		StandardClaims: jwt.StandardClaims{
@@ -49,7 +49,7 @@ func (j Jwt) IssueToken(userId uint) (string, error) {
 	return token.SignedString(j.privateKey)
 }
 
-func (j Jwt) UserIdByToken(tokenString string) (uint, error) {
+func (j JwtHandler) UserIdByToken(tokenString string) (uint, error) {
 	token, err := jwt.ParseWithClaims(tokenString, &Claims{}, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodRSA); !ok {
 			return nil, fmt.Errorf("unexpected token signing method")
