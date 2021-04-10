@@ -1,10 +1,16 @@
 package codesnippet
 
 import (
+	"errors"
 	"fmt"
 	"github.com/mp-hl-2021/code-swamp/internal/domain/codesnippet"
 	"github.com/mp-hl-2021/code-swamp/internal/usecases/account"
+	"strings"
 	"time"
+)
+
+var (
+	ErrorUnsupportedLanguage = errors.New("unsupported language")
 )
 
 type Interface interface {
@@ -63,7 +69,13 @@ func (u *UseCases) GetSnippetById(id uint) (codesnippet.CodeSnippet, error) {
 	return u.CodeSnippetStorage.GetCodeSnippetById(id)
 }
 
+var supportedLanguages = []string{"Python", "JavaScript", "Java", "Kotlin", "C#", "C", "C++", "PHP", "Swift", "Go", "Rust", "PETOOH"}
+
 func validateLanguage(lang string) error {
-	// TODO
-	return nil
+	for _, l := range supportedLanguages {
+		if strings.ToLower(lang) == strings.ToLower(l) {
+			return nil
+		}
+	}
+	return ErrorUnsupportedLanguage
 }
