@@ -4,7 +4,9 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"github.com/mp-hl-2021/code-swamp/internal/domain/codesnippet"
+	"github.com/mp-hl-2021/code-swamp/internal/interface/memory/codesnippetrepo"
 	"github.com/mp-hl-2021/code-swamp/internal/usecases/account"
 	"net/http"
 	"net/http/httptest"
@@ -55,8 +57,14 @@ func (CodeSnippetFake) CreateSnippet(a *account.Account, code string, lang strin
 	return 1, nil
 }
 
-func (CodeSnippetFake) GetSnippetById(uint) (codesnippet.CodeSnippet, error) {
-	panic("not implemented")
+func (CodeSnippetFake) GetSnippetById(sid uint) (codesnippet.CodeSnippet, error) {
+	if sid == 1 {
+		return codesnippet.CodeSnippet{}, codesnippetrepo.ErrInvalidSnippedId
+	}
+	if sid == 2 {
+		return codesnippet.CodeSnippet{}, errors.New("failed to get snippet")
+	}
+	return codesnippet.CodeSnippet{Code: "KoKoKoKoKoKoKoKoKoKo Kud-Kudah"}, nil
 }
 
 func (AccountFake) GetAccountByToken(token string) (account.Account, error) {
@@ -145,6 +153,13 @@ func makePostCodeRequest(t *testing.T, router http.Handler, token, code, lang st
 	req := httptest.NewRequest(http.MethodPost, "/", bytes.NewReader(b))
 	resp := httptest.NewRecorder()
 
+	router.ServeHTTP(resp, req)
+	return resp
+}
+
+func makeGetCodeRequest(router http.Handler, sid uint) *httptest.ResponseRecorder  {
+	req := httptest.NewRequest(http.MethodGet, "/toad/"+fmt.Sprintf("%d",sid), bytes.NewReader([]byte("")))
+	resp := httptest.NewRecorder()
 	router.ServeHTTP(resp, req)
 	return resp
 }
@@ -241,5 +256,27 @@ func Test_postCode(t *testing.T) {
 	t.Run("successful snippet creation ", func(t *testing.T) {
 		resp := makePostCodeRequest(t, router, "", "KoKoKoKoKoKoKoKoKoKo Kud-Kudah", "")
 		assertStatusCode(t, http.StatusCreated, resp.Code)
+	})
+}
+
+func Test_getCode(t *testing.T) {
+	service := NewApi(&AccountFake{}, &CodeSnippetFake{})
+	router := service.Router()
+
+	t.Run("failure on invalid json", func(t *testing.T) {
+		resp := invalidJsonTest(router, "/")
+		assertStatusCode(t, http.StatusBadRequest, resp.Code)
+	})
+	t.Run("no such code snipped", func(t *testing.T) {
+		resp := makeGetCodeRequest(router, 1)
+		assertStatusCode(t, http.StatusBadRequest, resp.Code)
+	})
+	t.Run("failed to get snippet", func(t *testing.T) {
+		resp := makeGetCodeRequest(router, 2)
+		assertStatusCode(t, http.StatusInternalServerError, resp.Code)
+	})
+	t.Run("successful obtainment of snippet", func(t *testing.T) {
+		resp := makeGetCodeRequest(router, 3)
+		assertStatusCode(t, http.StatusOK, resp.Code)
 	})
 }

@@ -4,16 +4,18 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/gorilla/mux"
+	"github.com/mp-hl-2021/code-swamp/internal/interface/memory/codesnippetrepo"
 	"github.com/mp-hl-2021/code-swamp/internal/usecases/account"
 	"github.com/mp-hl-2021/code-swamp/internal/usecases/codesnippet"
 	"net/http"
+	"strconv"
 	"time"
 )
 
-const snippetIdContextKey = "snippet_id"
+const snippetIdUrlPathKey = "snippet_id"
 
 type Api struct {
-	AccountUseCases account.Interface
+	AccountUseCases     account.Interface
 	CodeSnippetUseCases codesnippet.Interface
 }
 
@@ -33,8 +35,8 @@ func (a *Api) Router() http.Handler {
 	router.HandleFunc("/myswamp", a.postLinks).Methods(http.MethodPost)
 	router.HandleFunc("/", a.postCode).Methods(http.MethodPost)
 
-	router.HandleFunc("/"+snippetIdContextKey, a.getCode).Methods(http.MethodGet)
-	router.HandleFunc("/"+snippetIdContextKey+"/download", a.getCodeFile).Methods(http.MethodGet)
+	router.HandleFunc("/toad/{"+snippetIdUrlPathKey+"}", a.getCode).Methods(http.MethodGet)
+	router.HandleFunc("/toad/{"+snippetIdUrlPathKey+"}/download", a.getCodeFile).Methods(http.MethodGet)
 
 	return router
 }
@@ -191,18 +193,34 @@ type getCodeResponseModel struct {
 }
 
 func (a *Api) getCode(w http.ResponseWriter, r *http.Request) {
-	sid, ok := r.Context().Value(snippetIdContextKey).(uint)
+	vars := mux.Vars(r)
+	s, ok := vars[snippetIdUrlPathKey]
 	if !ok {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-	s, err := a.CodeSnippetUseCases.GetSnippetById(sid)
+	sid, err := strconv.ParseUint(s, 10, 64)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
+	ss, err := a.CodeSnippetUseCases.GetSnippetById(uint(sid))
+	if err != nil {
+		var statusCode int
+		switch err {
+
+		case
+			codesnippetrepo.ErrInvalidSnippedId:
+
+			statusCode = http.StatusBadRequest
+		default:
+			statusCode = http.StatusInternalServerError
+		}
+		w.WriteHeader(statusCode)
+		return
+	}
 	m := getCodeResponseModel{
-		Code: s.Code,
+		Code: ss.Code,
 	}
 	if err := json.NewEncoder(w).Encode(m); err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
