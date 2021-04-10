@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"github.com/mp-hl-2021/code-swamp/internal/domain/codesnippet"
 	"github.com/mp-hl-2021/code-swamp/internal/usecases"
 	"net/http"
 	"net/http/httptest"
@@ -36,11 +37,11 @@ func (AccountFake) LoginToAccount(login, password string) (string, error) {
 	return "", errors.New("failed to login to account")
 }
 
-func (AccountFake) GetMyLinks(a usecases.Account) ([]string, error) {
+func (AccountFake) GetMySnippetIds(a usecases.Account) ([]uint, error) {
 	if a.Id == 1 {
-		return []string{"a", "b", "c"}, nil
+		return []uint{1, 2, 3}, nil
 	}
-	return []string{}, errors.New("failed to get links")
+	return []uint{}, errors.New("failed to get links")
 }
 
 func (AccountFake) CreateSnippet(a *usecases.Account, code string, lang string, lifetime time.Duration) (uint, error) {
@@ -53,7 +54,7 @@ func (AccountFake) CreateSnippet(a *usecases.Account, code string, lang string, 
 	return 1, nil
 }
 
-func (AccountFake) GetSnippetById(string) (usecases.CodeSnippet, error) {
+func (AccountFake) GetSnippetById(uint) (codesnippet.CodeSnippet, error) {
 	panic("not implemented")
 }
 

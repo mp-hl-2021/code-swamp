@@ -6,9 +6,10 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/mp-hl-2021/code-swamp/internal/usecases"
 	"net/http"
-	"strings"
 	"time"
 )
+
+const snippetIdContextKey = "snippet_id"
 
 type Api struct {
 	AccountUseCases usecases.AccountInterface
@@ -29,8 +30,8 @@ func (a *Api) Router() http.Handler {
 	router.HandleFunc("/myswamp", a.postLinks).Methods(http.MethodPost)
 	router.HandleFunc("/", a.postCode).Methods(http.MethodPost)
 
-	router.HandleFunc("/{snippet_id}", a.getCode).Methods(http.MethodGet)
-	router.HandleFunc("/{snippet_id}/download", a.getCodeFile).Methods(http.MethodGet)
+	router.HandleFunc("/"+snippetIdContextKey, a.getCode).Methods(http.MethodGet)
+	router.HandleFunc("/"+snippetIdContextKey+"/download", a.getCodeFile).Methods(http.MethodGet)
 
 	return router
 }
@@ -105,6 +106,10 @@ type postLinksRequestModel struct {
 	Token string `json:"token"`
 }
 
+type postLinksResponseModel struct {
+	Links []string `json:"links"`
+}
+
 func (a *Api) postLinks(w http.ResponseWriter, r *http.Request) {
 	var m postLinksRequestModel
 	if err := json.NewDecoder(r.Body).Decode(&m); err != nil {
@@ -117,12 +122,21 @@ func (a *Api) postLinks(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	links, err := a.AccountUseCases.GetMyLinks(acc)
+	ss, err := a.AccountUseCases.GetMySnippetIds(acc)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-	w.Write([]byte(strings.Join(links, ",")))
+	mm := postLinksResponseModel{
+		Links: make([]string, len(ss)),
+	}
+	for i := range ss {
+		mm.Links[i] = fmt.Sprintf("/%d", ss[i])
+	}
+	if err := json.NewEncoder(w).Encode(mm); err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
 }
 
 type postCodeRequestModel struct {
@@ -169,9 +183,28 @@ func (a *Api) postCode(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusCreated)
 }
 
-func (a *Api) getCode(w http.ResponseWriter, _ *http.Request) {
-	// TODO: generate snippet id by url.
-	w.WriteHeader(http.StatusOK)
+type getCodeResponseModel struct {
+	Code string `json:"code"`
+}
+
+func (a *Api) getCode(w http.ResponseWriter, r *http.Request) {
+	sid, ok := r.Context().Value(snippetIdContextKey).(uint)
+	if !ok {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	s, err := a.AccountUseCases.GetSnippetById(sid)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	m := getCodeResponseModel{
+		Code: s.Code,
+	}
+	if err := json.NewEncoder(w).Encode(m); err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
 }
 
 func (a *Api) getCodeFile(w http.ResponseWriter, _ *http.Request) {
