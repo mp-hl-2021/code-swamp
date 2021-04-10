@@ -1,32 +1,32 @@
 package _interface
 
 import (
-	"github.com/mp-hl-2021/code-swamp/internal/domain/repository"
+	account "github.com/mp-hl-2021/code-swamp/internal/domain/account"
 	"sync"
 )
 
 type Memory struct {
-	accountsById    map[uint]repository.Account
-	accountsByLogin map[string]repository.Account
+	accountsById    map[uint]account.Account
+	accountsByLogin map[string]account.Account
 	nextId          uint
 	mu              *sync.Mutex
 }
 
 func NewMemory() *Memory {
 	return &Memory{
-		accountsById:    make(map[uint]repository.Account),
-		accountsByLogin: make(map[string]repository.Account),
+		accountsById:    make(map[uint]account.Account),
+		accountsByLogin: make(map[string]account.Account),
 		mu:              &sync.Mutex{},
 	}
 }
 
-func (m *Memory) CreateAccount(cred repository.Credentials) (repository.Account, error) {
+func (m *Memory) CreateAccount(cred account.Credentials) (account.Account, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	if _, ok := m.accountsByLogin[cred.Login]; ok {
-		return repository.Account{}, repository.ErrAlreadyExist
+		return account.Account{}, account.ErrAlreadyExist
 	}
-	a := repository.Account {
+	a := account.Account {
 		Id: m.nextId,
 		Credentials: cred,
 	}
@@ -36,22 +36,22 @@ func (m *Memory) CreateAccount(cred repository.Credentials) (repository.Account,
 	return a, nil
 }
 
-func (m *Memory) GetAccountById(id uint) (repository.Account, error) {
+func (m *Memory) GetAccountById(id uint) (account.Account, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	a, ok := m.accountsById[id]
 	if !ok {
-		return a, repository.ErrNotFound
+		return a, account.ErrNotFound
 	}
 	return a, nil
 }
 
-func (m *Memory) GetAccountByLogin(login string) (repository.Account, error) {
+func (m *Memory) GetAccountByLogin(login string) (account.Account, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	a, ok := m.accountsByLogin[login]
 	if !ok {
-		return a, repository.ErrNotFound
+		return a, account.ErrNotFound
 	}
 	return a, nil
 }
