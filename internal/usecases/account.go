@@ -23,6 +23,8 @@ var (
 
 	ErrInvalidLogin    = errors.New("login not found")
 	ErrInvalidPassword = errors.New("invalid password")
+
+	ErrInvalidLanguage = errors.New("language is invalid")
 )
 
 const (
@@ -47,7 +49,7 @@ type AccountInterface interface {
 	LoginToAccount(login, password string) (string, error)
 
 	GetMyLinks(a Account) ([]string, error)
-	CreateSnippet(a *Account, code string, lang *string, lifetime time.Duration) (string, error)
+	CreateSnippet(a *Account, code string, lang string, lifetime time.Duration) (uint, error)
 	GetSnippetById(string) (CodeSnippet, error)
 	GetAccountByToken(string) (Account, error)
 }
@@ -108,10 +110,15 @@ func (User) GetMyLinks(a Account) ([]string, error) {
 	return []string{"a", "b", "c"}, nil
 }
 
-func (User) CreateSnippet(a *Account, code string, lang *string, lifetime time.Duration) (string, error) {
-	// TODO
+func (User) CreateSnippet(a *Account, code string, lang string, lifetime time.Duration) (uint, error) {
 	fmt.Printf("CreateLink: %s %s", a.Id, code)
-	return "id", nil
+	if lang != "" {
+		if err := validateLanguage(lang); err != nil {
+			return 0, err
+		}
+	}
+	// TODO
+	return 0, nil
 }
 
 func (User) GetSnippetById(id string) (CodeSnippet, error) {
@@ -187,5 +194,10 @@ func validatePassword(password string) error {
 	if digit == 0 {
 		return ErrNoDigits
 	}
+	return nil
+}
+
+func validateLanguage(lang string) error {
+	// TODO
 	return nil
 }

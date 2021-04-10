@@ -36,8 +36,8 @@ func (a *Api) Router() http.Handler {
 }
 
 type postSignupRequestModel struct {
-	Login    string
-	Password string
+	Login    string `json:"login"`
+	Password string `json:"password"`
 }
 
 func (a *Api) postSignup(w http.ResponseWriter, r *http.Request) {
@@ -98,15 +98,11 @@ func (a *Api) postSignin(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/jwt")
-	if _, err := w.Write([]byte(token)); err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
-	w.WriteHeader(http.StatusOK)
+	w.Write([]byte(token))
 }
 
 type postLinksRequestModel struct {
-	token string
+	Token string `json:"token"`
 }
 
 func (a *Api) postLinks(w http.ResponseWriter, r *http.Request) {
@@ -115,7 +111,7 @@ func (a *Api) postLinks(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	acc, err := a.AccountUseCases.GetAccountByToken(m.token)
+	acc, err := a.AccountUseCases.GetAccountByToken(m.Token)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		return
@@ -123,22 +119,17 @@ func (a *Api) postLinks(w http.ResponseWriter, r *http.Request) {
 
 	links, err := a.AccountUseCases.GetMyLinks(acc)
 	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
+		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-
-	if _, err := w.Write([]byte(strings.Join(links, ","))); err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
-	w.WriteHeader(http.StatusOK)
+	w.Write([]byte(strings.Join(links, ",")))
 }
 
 type postCodeRequestModel struct {
-	token *string
-	code  string
-	lang  *string
-	lifetime time.Duration
+	Token    string        `json:"token"`
+	Code     string        `json:"code"`
+	Lang     string        `json:"lang"`
+	Lifetime time.Duration `json:"lifetime"`
 }
 
 func (a *Api) postCode(w http.ResponseWriter, r *http.Request) {
@@ -149,27 +140,33 @@ func (a *Api) postCode(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var acc *usecases.Account = nil
-	if m.token != nil {
-		a, err := a.AccountUseCases.GetAccountByToken(*m.token)
+	if m.Token != "" {
+		a, err := a.AccountUseCases.GetAccountByToken(m.Token)
 		acc = &a
 		if err != nil {
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
 	}
-	id, err := a.AccountUseCases.CreateSnippet(acc, m.code, m.lang, m.lifetime)
+	id, err := a.AccountUseCases.CreateSnippet(acc, m.Code, m.Lang, m.Lifetime)
 	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
+		var statusCode int
+		switch err {
+
+		case
+			usecases.ErrInvalidLanguage:
+
+			statusCode = http.StatusBadRequest
+		default:
+			statusCode = http.StatusInternalServerError
+		}
+		w.WriteHeader(statusCode)
 		return
 	}
 
-	// TODO: generate url with snippet by id.
-
-	if _, err := w.Write([]byte(id)); err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
-	w.WriteHeader(http.StatusOK)
+	location := fmt.Sprintf("/%d", id)
+	w.Header().Set("Location", location)
+	w.WriteHeader(http.StatusCreated)
 }
 
 func (a *Api) getCode(w http.ResponseWriter, _ *http.Request) {
