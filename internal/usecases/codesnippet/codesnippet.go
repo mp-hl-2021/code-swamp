@@ -35,7 +35,7 @@ func (u *UseCases) CreateSnippet(a *account.Account, code string, lang string, l
 	if err := u.CodeSnippetStorage.DeleteExpiredSnippets(); err != nil {
 		return 0, err
 	}
-	fmt.Printf("CreateSnippet: %d %s\n", a.Id, code)
+	fmt.Printf("CreateSnippet: %s\n", code)
 	if lang != "" {
 		if err := validateLanguage(lang); err != nil {
 			return 0, err

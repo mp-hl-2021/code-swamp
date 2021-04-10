@@ -214,6 +214,6 @@ func (a *Api) getCode(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(statusCode)
 		return
 	}
-	w.Header().Set("Code", ss.Code)
-	w.WriteHeader(http.StatusOK)
+	w.Header().Set("Content-Type", "text/plain")
+	w.Write([]byte(ss.Code))
 }
