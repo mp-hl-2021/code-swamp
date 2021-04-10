@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/mp-hl-2021/code-swamp/internal/interface/httpapi"
 	"github.com/mp-hl-2021/code-swamp/internal/interface/memory/accountrepo"
+	"github.com/mp-hl-2021/code-swamp/internal/interface/memory/codesnippetrepo"
 	"github.com/mp-hl-2021/code-swamp/internal/service/token"
 	"github.com/mp-hl-2021/code-swamp/internal/usecases/account"
 	"github.com/mp-hl-2021/code-swamp/internal/usecases/codesnippet"
@@ -32,7 +33,7 @@ func main() {
 	}
 
 	codeSnippetUseCases := &codesnippet.UseCases{
-		CodeSnippetStorage: codesnippet.NewMemory(),
+		CodeSnippetStorage: codesnippetrepo.NewMemory(),
 	}
 
 	service := httpapi.NewApi(accountUseCases, codeSnippetUseCases)
