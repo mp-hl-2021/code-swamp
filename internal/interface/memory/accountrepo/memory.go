@@ -1,4 +1,4 @@
-package _interface
+package accountrepo
 
 import (
 	account "github.com/mp-hl-2021/code-swamp/internal/domain/account"

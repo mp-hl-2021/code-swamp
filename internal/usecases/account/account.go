@@ -1,15 +1,13 @@
-package usecases
+package account
 
 import (
 	"errors"
 	"fmt"
 	account "github.com/mp-hl-2021/code-swamp/internal/domain/account"
-	"github.com/mp-hl-2021/code-swamp/internal/domain/codesnippet"
+	"github.com/mp-hl-2021/code-swamp/internal/service/token"
 	"unicode"
 
 	"golang.org/x/crypto/bcrypt"
-
-	"time"
 )
 
 var (
@@ -39,23 +37,19 @@ type Account struct {
 	Id uint
 }
 
-type AccountInterface interface {
+type Interface interface {
 	CreateAccount(login, password string) (Account, error)
 	LoginToAccount(login, password string) (string, error)
 
-	GetMySnippetIds(a Account) ([]uint, error)
-	CreateSnippet(a *Account, code string, lang string, lifetime time.Duration) (uint, error)
-	GetSnippetById(uint) (codesnippet.CodeSnippet, error)
 	GetAccountByToken(string) (Account, error)
 }
 
-type User struct {
-	Auth           Interface
-	AccountStorage account.Interface
-	CodeSnippetStorage codesnippet.Interface
+type UseCases struct {
+	Auth               token.Interface
+	AccountStorage     account.Interface
 }
 
-func (u *User) CreateAccount(login, password string) (Account, error) {
+func (u *UseCases) CreateAccount(login, password string) (Account, error) {
 	fmt.Printf("Register: %s %s\n", login, password)
 	if err := validateLogin(login); err != nil {
 		return Account{}, err
@@ -79,7 +73,7 @@ func (u *User) CreateAccount(login, password string) (Account, error) {
 	return Account{Id: acc.Id}, nil
 }
 
-func (u *User) LoginToAccount(login, password string) (string, error) {
+func (u *UseCases) LoginToAccount(login, password string) (string, error) {
 	fmt.Printf("Login: %s %s\n", login, password)
 	if err := validateLogin(login); err != nil {
 		return "", err
@@ -100,44 +94,7 @@ func (u *User) LoginToAccount(login, password string) (string, error) {
 	return token, err
 }
 
-func (u *User) GetMySnippetIds(a Account) ([]uint, error) {
-	fmt.Printf("GetMySnippetIds: %s", a.Id)
-	return u.CodeSnippetStorage.GetMyCodeSnippetIds(a.Id)
-}
-
-func (u *User) CreateSnippet(a *Account, code string, lang string, lifetime time.Duration) (uint, error) {
-	fmt.Printf("CreateSnippet: %s %s", a.Id, code)
-	if lang != "" {
-		if err := validateLanguage(lang); err != nil {
-			return 0, err
-		}
-	}
-	s := codesnippet.CodeSnippet{
-		Code:     code,
-		Lang:     lang,
-		Lifetime: lifetime,
-	}
-	if a == nil {
-		sid, err := u.CodeSnippetStorage.CreateCodeSnippet(s)
-		if err != nil {
-			return 0, err
-		}
-		return sid, nil
-	} else {
-		sid, err := u.CodeSnippetStorage.CreateCodeSnippetWithUser(s, a.Id)
-		if err != nil {
-			return 0, err
-		}
-		return sid, nil
-	}
-}
-
-func (u *User) GetSnippetById(id uint) (codesnippet.CodeSnippet, error) {
-	fmt.Printf("GetSnippetById: %s", id)
-	return u.CodeSnippetStorage.GetCodeSnippetById(id)
-}
-
-func (u User) GetAccountByToken(token string) (Account, error) {
+func (u UseCases) GetAccountByToken(token string) (Account, error) {
 	id, err := u.Auth.UserIdByToken(token)
 	if err != nil {
 		return Account{}, err
@@ -204,10 +161,5 @@ func validatePassword(password string) error {
 	if digit == 0 {
 		return ErrNoDigits
 	}
-	return nil
-}
-
-func validateLanguage(lang string) error {
-	// TODO
 	return nil
 }

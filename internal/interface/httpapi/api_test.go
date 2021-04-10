@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"github.com/mp-hl-2021/code-swamp/internal/domain/codesnippet"
-	"github.com/mp-hl-2021/code-swamp/internal/usecases"
+	"github.com/mp-hl-2021/code-swamp/internal/usecases/account"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -13,15 +13,16 @@ import (
 )
 
 type AccountFake struct{}
+type CodeSnippetFake struct{}
 
-func (AccountFake) CreateAccount(login, password string) (usecases.Account, error) {
+func (AccountFake) CreateAccount(login, password string) (account.Account, error) {
 	if login == "katyukha" {
-		return usecases.Account{Id: 1}, nil
+		return account.Account{Id: 1}, nil
 	}
 	if password == "  " {
-		return usecases.Account{}, usecases.ErrInvalidPasswordString
+		return account.Account{}, account.ErrInvalidPasswordString
 	}
-	return usecases.Account{}, errors.New("failed to create account")
+	return account.Account{}, errors.New("failed to create account")
 }
 
 func (AccountFake) LoginToAccount(login, password string) (string, error) {
@@ -29,24 +30,24 @@ func (AccountFake) LoginToAccount(login, password string) (string, error) {
 		return "token", nil
 	}
 	if login == "masha" && password != "123" {
-		return "", usecases.ErrInvalidPassword
+		return "", account.ErrInvalidPassword
 	}
 	if password == "  " {
-		return "", usecases.ErrInvalidPasswordString
+		return "", account.ErrInvalidPasswordString
 	}
 	return "", errors.New("failed to login to account")
 }
 
-func (AccountFake) GetMySnippetIds(a usecases.Account) ([]uint, error) {
+func (CodeSnippetFake) GetMySnippetIds(a account.Account) ([]uint, error) {
 	if a.Id == 1 {
 		return []uint{1, 2, 3}, nil
 	}
 	return []uint{}, errors.New("failed to get links")
 }
 
-func (AccountFake) CreateSnippet(a *usecases.Account, code string, lang string, lifetime time.Duration) (uint, error) {
+func (CodeSnippetFake) CreateSnippet(a *account.Account, code string, lang string, lifetime time.Duration) (uint, error) {
 	if lang == "petooh" {
-		return 0, usecases.ErrInvalidLanguage
+		return 0, account.ErrInvalidLanguage
 	}
 	if code == "internal" {
 		return 0, errors.New("failed ti create new snippet")
@@ -54,18 +55,18 @@ func (AccountFake) CreateSnippet(a *usecases.Account, code string, lang string, 
 	return 1, nil
 }
 
-func (AccountFake) GetSnippetById(uint) (codesnippet.CodeSnippet, error) {
+func (CodeSnippetFake) GetSnippetById(uint) (codesnippet.CodeSnippet, error) {
 	panic("not implemented")
 }
 
-func (AccountFake) GetAccountByToken(token string) (usecases.Account, error) {
+func (AccountFake) GetAccountByToken(token string) (account.Account, error) {
 	if token == "correct" {
-		return usecases.Account{Id: 1}, nil
+		return account.Account{Id: 1}, nil
 	}
 	if token == "internal" {
-		return usecases.Account{Id: 100}, nil
+		return account.Account{Id: 100}, nil
 	}
-	return usecases.Account{}, errors.New("invalid token claims")
+	return account.Account{}, errors.New("invalid token claims")
 }
 
 func assertStatusCode(t *testing.T, expectedCode, actualCode int) {
@@ -149,7 +150,7 @@ func makePostCodeRequest(t *testing.T, router http.Handler, token, code, lang st
 }
 
 func Test_postSignup(t *testing.T) {
-	service := NewApi(&AccountFake{})
+	service := NewApi(&AccountFake{}, &CodeSnippetFake{})
 	router := service.Router()
 
 	t.Run("failure on invalid json", func(t *testing.T) {
@@ -174,7 +175,7 @@ func Test_postSignup(t *testing.T) {
 }
 
 func Test_postSignin(t *testing.T) {
-	service := NewApi(&AccountFake{})
+	service := NewApi(&AccountFake{}, &CodeSnippetFake{})
 	router := service.Router()
 
 	t.Run("failure on invalid json", func(t *testing.T) {
@@ -196,7 +197,7 @@ func Test_postSignin(t *testing.T) {
 }
 
 func Test_postLinks(t *testing.T) {
-	service := NewApi(&AccountFake{})
+	service := NewApi(&AccountFake{}, &CodeSnippetFake{})
 	router := service.Router()
 
 	t.Run("failure on invalid json", func(t *testing.T) {
@@ -218,7 +219,7 @@ func Test_postLinks(t *testing.T) {
 }
 
 func Test_postCode(t *testing.T) {
-	service := NewApi(&AccountFake{})
+	service := NewApi(&AccountFake{}, &CodeSnippetFake{})
 	router := service.Router()
 
 	t.Run("failure on invalid json", func(t *testing.T) {

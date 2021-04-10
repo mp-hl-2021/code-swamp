@@ -3,9 +3,11 @@ package main
 import (
 	"flag"
 	"fmt"
-	"github.com/mp-hl-2021/code-swamp/internal/interface"
 	"github.com/mp-hl-2021/code-swamp/internal/interface/httpapi"
-	"github.com/mp-hl-2021/code-swamp/internal/usecases"
+	"github.com/mp-hl-2021/code-swamp/internal/interface/memory/accountrepo"
+	"github.com/mp-hl-2021/code-swamp/internal/service/token"
+	"github.com/mp-hl-2021/code-swamp/internal/usecases/account"
+	"github.com/mp-hl-2021/code-swamp/internal/usecases/codesnippet"
 	"io/ioutil"
 	"net/http"
 	"time"
@@ -19,17 +21,21 @@ func main() {
 	privateKeyBytes, err := ioutil.ReadFile(*privateKeyPath)
 	publicKeyBytes, err := ioutil.ReadFile(*publicKeyPath)
 
-	a, err := _interface.NewJwt(privateKeyBytes, publicKeyBytes, 100*time.Minute)
+	a, err := token.NewJwt(privateKeyBytes, publicKeyBytes, 100*time.Minute)
 	if err != nil {
 		panic(err)
 	}
 
-	user := &usecases.User{
-		AccountStorage: _interface.NewMemory(),
+	accountUseCases := &account.UseCases{
+		AccountStorage: accountrepo.NewMemory(),
 		Auth:           a,
 	}
 
-	service := httpapi.NewApi(user)
+	codeSnippetUseCases := &codesnippet.UseCases{
+		CodeSnippetStorage: codesnippet.NewMemory(),
+	}
+
+	service := httpapi.NewApi(accountUseCases, codeSnippetUseCases)
 
 	addr := "localhost:8080"
 	server := http.Server{

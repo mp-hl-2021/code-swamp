@@ -4,7 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/gorilla/mux"
-	"github.com/mp-hl-2021/code-swamp/internal/usecases"
+	"github.com/mp-hl-2021/code-swamp/internal/usecases/account"
+	"github.com/mp-hl-2021/code-swamp/internal/usecases/codesnippet"
 	"net/http"
 	"time"
 )
@@ -12,12 +13,14 @@ import (
 const snippetIdContextKey = "snippet_id"
 
 type Api struct {
-	AccountUseCases usecases.AccountInterface
+	AccountUseCases account.Interface
+	CodeSnippetUseCases codesnippet.Interface
 }
 
-func NewApi(u usecases.AccountInterface) *Api {
+func NewApi(a account.Interface, c codesnippet.Interface) *Api {
 	return &Api{
-		AccountUseCases: u,
+		AccountUseCases:     a,
+		CodeSnippetUseCases: c,
 	}
 }
 
@@ -53,14 +56,14 @@ func (a *Api) postSignup(w http.ResponseWriter, r *http.Request) {
 		var statusCode int
 		switch err {
 		case
-			usecases.ErrInvalidLoginString,
-			usecases.ErrInvalidLoginString2,
-			usecases.ErrInvalidPasswordString,
-			usecases.ErrTooShortString,
-			usecases.ErrTooLongString,
-			usecases.ErrNoDigits,
-			usecases.ErrNoUpperCaseLetters,
-			usecases.ErrNoLowerCaseLetters:
+			account.ErrInvalidLoginString,
+			account.ErrInvalidLoginString2,
+			account.ErrInvalidPasswordString,
+			account.ErrTooShortString,
+			account.ErrTooLongString,
+			account.ErrNoDigits,
+			account.ErrNoUpperCaseLetters,
+			account.ErrNoLowerCaseLetters:
 
 			statusCode = http.StatusBadRequest
 		default:
@@ -87,8 +90,8 @@ func (a *Api) postSignin(w http.ResponseWriter, r *http.Request) {
 		switch err {
 
 		case
-			usecases.ErrInvalidLogin,
-			usecases.ErrInvalidPassword:
+			account.ErrInvalidLogin,
+			account.ErrInvalidPassword:
 
 			statusCode = http.StatusUnauthorized
 		default:
@@ -122,7 +125,7 @@ func (a *Api) postLinks(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ss, err := a.AccountUseCases.GetMySnippetIds(acc)
+	ss, err := a.CodeSnippetUseCases.GetMySnippetIds(acc)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -153,7 +156,7 @@ func (a *Api) postCode(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var acc *usecases.Account = nil
+	var acc *account.Account = nil
 	if m.Token != "" {
 		a, err := a.AccountUseCases.GetAccountByToken(m.Token)
 		acc = &a
@@ -162,13 +165,13 @@ func (a *Api) postCode(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	id, err := a.AccountUseCases.CreateSnippet(acc, m.Code, m.Lang, m.Lifetime)
+	id, err := a.CodeSnippetUseCases.CreateSnippet(acc, m.Code, m.Lang, m.Lifetime)
 	if err != nil {
 		var statusCode int
 		switch err {
 
 		case
-			usecases.ErrInvalidLanguage:
+			account.ErrInvalidLanguage:
 
 			statusCode = http.StatusBadRequest
 		default:
@@ -193,7 +196,7 @@ func (a *Api) getCode(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-	s, err := a.AccountUseCases.GetSnippetById(sid)
+	s, err := a.CodeSnippetUseCases.GetSnippetById(sid)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		return
