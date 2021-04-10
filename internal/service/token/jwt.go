@@ -9,7 +9,6 @@ import (
 	"time"
 )
 
-// todo: key rotation
 type JwtHandler struct {
 	publicKey  *rsa.PublicKey
 	privateKey *rsa.PrivateKey

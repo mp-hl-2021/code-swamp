@@ -36,7 +36,6 @@ func (a *Api) Router() http.Handler {
 	router.HandleFunc("/", a.postCode).Methods(http.MethodPost)
 
 	router.HandleFunc("/toad/{"+snippetIdUrlPathKey+"}", a.getCode).Methods(http.MethodGet)
-	router.HandleFunc("/toad/{"+snippetIdUrlPathKey+"}/download", a.getCodeFile).Methods(http.MethodGet)
 
 	return router
 }
@@ -188,10 +187,6 @@ func (a *Api) postCode(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusCreated)
 }
 
-type getCodeResponseModel struct {
-	Code string `json:"code"`
-}
-
 func (a *Api) getCode(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	s, ok := vars[snippetIdUrlPathKey]
@@ -219,16 +214,6 @@ func (a *Api) getCode(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(statusCode)
 		return
 	}
-	m := getCodeResponseModel{
-		Code: ss.Code,
-	}
-	if err := json.NewEncoder(w).Encode(m); err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-}
-
-func (a *Api) getCodeFile(w http.ResponseWriter, _ *http.Request) {
-	// TODO: generate snippet id by url.
+	w.Header().Set("Code", ss.Code)
 	w.WriteHeader(http.StatusOK)
 }
