@@ -18,11 +18,17 @@ type UseCases struct {
 }
 
 func (u *UseCases) GetMySnippetIds(a account.Account) ([]uint, error) {
+	if err := u.CodeSnippetStorage.DeleteExpiredSnippets(); err != nil {
+		return []uint{}, err
+	}
 	fmt.Printf("GetMySnippetIds: %d\n", a.Id)
 	return u.CodeSnippetStorage.GetMyCodeSnippetIds(a.Id)
 }
 
 func (u *UseCases) CreateSnippet(a *account.Account, code string, lang string, lifetime time.Duration) (uint, error) {
+	if err := u.CodeSnippetStorage.DeleteExpiredSnippets(); err != nil {
+		return 0, err
+	}
 	fmt.Printf("CreateSnippet: %d %s\n", a.Id, code)
 	if lang != "" {
 		if err := validateLanguage(lang); err != nil {
@@ -50,6 +56,9 @@ func (u *UseCases) CreateSnippet(a *account.Account, code string, lang string, l
 }
 
 func (u *UseCases) GetSnippetById(id uint) (codesnippet.CodeSnippet, error) {
+	if err := u.CodeSnippetStorage.DeleteExpiredSnippets(); err != nil {
+		return codesnippet.CodeSnippet{}, err
+	}
 	fmt.Printf("GetSnippetById: %d\n", id)
 	return u.CodeSnippetStorage.GetCodeSnippetById(id)
 }

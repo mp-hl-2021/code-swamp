@@ -15,4 +15,5 @@ type Interface interface {
 	CreateCodeSnippetWithUser(s CodeSnippet, uid uint) (uint, error)
 	GetCodeSnippetById(sid uint) (CodeSnippet, error)
 	GetMyCodeSnippetIds(uid uint) ([]uint, error)
+	DeleteExpiredSnippets() error
 }
