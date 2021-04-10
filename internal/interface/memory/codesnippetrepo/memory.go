@@ -27,6 +27,8 @@ func NewMemory() *Memory {
 }
 
 func (m *Memory) CreateCodeSnippet(s codesnippet.CodeSnippet) (uint, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
 	sid := m.nextId
 	m.nextId += 1
 	m.snippetById[sid] = s
@@ -34,15 +36,18 @@ func (m *Memory) CreateCodeSnippet(s codesnippet.CodeSnippet) (uint, error) {
 }
 
 func (m *Memory) CreateCodeSnippetWithUser(s codesnippet.CodeSnippet, uid uint) (uint, error) {
-	sid, err := m.CreateCodeSnippet(s)
-	if err != nil {
-		return 0, err
-	}
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	sid := m.nextId
+	m.nextId += 1
+	m.snippetById[sid] = s
 	m.snippetIdsForUser[uid] = append(m.snippetIdsForUser[uid], sid)
 	return sid, nil
 }
 
 func (m *Memory) GetCodeSnippetById(sid uint) (codesnippet.CodeSnippet, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
 	s, ok := m.snippetById[sid]
 	if !ok {
 		return codesnippet.CodeSnippet{}, ErrInvalidSnippedId
@@ -51,6 +56,8 @@ func (m *Memory) GetCodeSnippetById(sid uint) (codesnippet.CodeSnippet, error) {
 }
 
 func (m *Memory) GetMyCodeSnippetIds(uid uint) ([]uint, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
 	ids, ok := m.snippetIdsForUser[uid]
 	if !ok {
 		return []uint{}, nil
