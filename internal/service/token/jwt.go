@@ -1,4 +1,4 @@
-package _interface
+package token
 
 import (
 	"github.com/dgrijalva/jwt-go"
@@ -9,7 +9,6 @@ import (
 	"time"
 )
 
-// todo: key rotation
 type JwtHandler struct {
 	publicKey  *rsa.PublicKey
 	privateKey *rsa.PrivateKey

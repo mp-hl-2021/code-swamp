@@ -1,4 +1,4 @@
-package usecases
+package token
 
 type Interface interface {
 	IssueToken(userId uint) (string, error)

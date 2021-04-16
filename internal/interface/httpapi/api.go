@@ -4,19 +4,25 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/gorilla/mux"
-	"github.com/mp-hl-2021/code-swamp/internal/usecases"
+	"github.com/mp-hl-2021/code-swamp/internal/interface/memory/codesnippetrepo"
+	"github.com/mp-hl-2021/code-swamp/internal/usecases/account"
+	"github.com/mp-hl-2021/code-swamp/internal/usecases/codesnippet"
 	"net/http"
-	"strings"
+	"strconv"
 	"time"
 )
 
+const snippetIdUrlPathKey = "snippet_id"
+
 type Api struct {
-	AccountUseCases usecases.AccountInterface
+	AccountUseCases     account.Interface
+	CodeSnippetUseCases codesnippet.Interface
 }
 
-func NewApi(u usecases.AccountInterface) *Api {
+func NewApi(a account.Interface, c codesnippet.Interface) *Api {
 	return &Api{
-		AccountUseCases: u,
+		AccountUseCases:     a,
+		CodeSnippetUseCases: c,
 	}
 }
 
@@ -29,15 +35,14 @@ func (a *Api) Router() http.Handler {
 	router.HandleFunc("/myswamp", a.postLinks).Methods(http.MethodPost)
 	router.HandleFunc("/", a.postCode).Methods(http.MethodPost)
 
-	router.HandleFunc("/{snippet_id}", a.getCode).Methods(http.MethodGet)
-	router.HandleFunc("/{snippet_id}/download", a.getCodeFile).Methods(http.MethodGet)
+	router.HandleFunc("/toad/{"+snippetIdUrlPathKey+"}", a.getCode).Methods(http.MethodGet)
 
 	return router
 }
 
 type postSignupRequestModel struct {
-	Login    string
-	Password string
+	Login    string `json:"login"`
+	Password string `json:"password"`
 }
 
 func (a *Api) postSignup(w http.ResponseWriter, r *http.Request) {
@@ -52,14 +57,14 @@ func (a *Api) postSignup(w http.ResponseWriter, r *http.Request) {
 		var statusCode int
 		switch err {
 		case
-			usecases.ErrInvalidLoginString,
-			usecases.ErrInvalidLoginString2,
-			usecases.ErrInvalidPasswordString,
-			usecases.ErrTooShortString,
-			usecases.ErrTooLongString,
-			usecases.ErrNoDigits,
-			usecases.ErrNoUpperCaseLetters,
-			usecases.ErrNoLowerCaseLetters:
+			account.ErrInvalidLoginString,
+			account.ErrInvalidLoginString2,
+			account.ErrInvalidPasswordString,
+			account.ErrTooShortString,
+			account.ErrTooLongString,
+			account.ErrNoDigits,
+			account.ErrNoUpperCaseLetters,
+			account.ErrNoLowerCaseLetters:
 
 			statusCode = http.StatusBadRequest
 		default:
@@ -86,8 +91,8 @@ func (a *Api) postSignin(w http.ResponseWriter, r *http.Request) {
 		switch err {
 
 		case
-			usecases.ErrInvalidLogin,
-			usecases.ErrInvalidPassword:
+			account.ErrInvalidLogin,
+			account.ErrInvalidPassword:
 
 			statusCode = http.StatusUnauthorized
 		default:
@@ -98,15 +103,15 @@ func (a *Api) postSignin(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/jwt")
-	if _, err := w.Write([]byte(token)); err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
-	w.WriteHeader(http.StatusOK)
+	w.Write([]byte(token))
 }
 
 type postLinksRequestModel struct {
-	token string
+	Token string `json:"token"`
+}
+
+type postLinksResponseModel struct {
+	Links []string `json:"links"`
 }
 
 func (a *Api) postLinks(w http.ResponseWriter, r *http.Request) {
@@ -115,30 +120,34 @@ func (a *Api) postLinks(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	acc, err := a.AccountUseCases.GetAccountByToken(m.token)
+	acc, err := a.AccountUseCases.GetAccountByToken(m.Token)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
-	links, err := a.AccountUseCases.GetMyLinks(acc)
+	ss, err := a.CodeSnippetUseCases.GetMySnippetIds(acc)
 	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
+		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-
-	if _, err := w.Write([]byte(strings.Join(links, ","))); err != nil {
-		w.WriteHeader(http.StatusBadRequest)
+	mm := postLinksResponseModel{
+		Links: make([]string, len(ss)),
+	}
+	for i := range ss {
+		mm.Links[i] = fmt.Sprintf("/%d", ss[i])
+	}
+	if err := json.NewEncoder(w).Encode(mm); err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-	w.WriteHeader(http.StatusOK)
 }
 
 type postCodeRequestModel struct {
-	token *string
-	code  string
-	lang  *string
-	lifetime time.Duration
+	Token    string        `json:"token"`
+	Code     string        `json:"code"`
+	Lang     string        `json:"lang"`
+	Lifetime time.Duration `json:"lifetime"`
 }
 
 func (a *Api) postCode(w http.ResponseWriter, r *http.Request) {
@@ -148,36 +157,63 @@ func (a *Api) postCode(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var acc *usecases.Account = nil
-	if m.token != nil {
-		a, err := a.AccountUseCases.GetAccountByToken(*m.token)
+	var acc *account.Account = nil
+	if m.Token != "" {
+		a, err := a.AccountUseCases.GetAccountByToken(m.Token)
 		acc = &a
 		if err != nil {
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
 	}
-	id, err := a.AccountUseCases.CreateSnippet(acc, m.code, m.lang, m.lifetime)
+	id, err := a.CodeSnippetUseCases.CreateSnippet(acc, m.Code, m.Lang, m.Lifetime)
+	if err != nil {
+		var statusCode int
+		switch err {
+
+		case
+			account.ErrInvalidLanguage:
+
+			statusCode = http.StatusBadRequest
+		default:
+			statusCode = http.StatusInternalServerError
+		}
+		w.WriteHeader(statusCode)
+		return
+	}
+
+	location := fmt.Sprintf("/%d", id)
+	w.Header().Set("Location", location)
+	w.WriteHeader(http.StatusCreated)
+}
+
+func (a *Api) getCode(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	s, ok := vars[snippetIdUrlPathKey]
+	if !ok {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	sid, err := strconv.ParseUint(s, 10, 64)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
+	ss, err := a.CodeSnippetUseCases.GetSnippetById(uint(sid))
+	if err != nil {
+		var statusCode int
+		switch err {
 
-	// TODO: generate url with snippet by id.
+		case
+			codesnippetrepo.ErrInvalidSnippedId:
 
-	if _, err := w.Write([]byte(id)); err != nil {
-		w.WriteHeader(http.StatusBadRequest)
+			statusCode = http.StatusBadRequest
+		default:
+			statusCode = http.StatusInternalServerError
+		}
+		w.WriteHeader(statusCode)
 		return
 	}
-	w.WriteHeader(http.StatusOK)
-}
-
-func (a *Api) getCode(w http.ResponseWriter, _ *http.Request) {
-	// TODO: generate snippet id by url.
-	w.WriteHeader(http.StatusOK)
-}
-
-func (a *Api) getCodeFile(w http.ResponseWriter, _ *http.Request) {
-	// TODO: generate snippet id by url.
-	w.WriteHeader(http.StatusOK)
+	w.Header().Set("Content-Type", "text/plain")
+	w.Write([]byte(ss.Code))
 }

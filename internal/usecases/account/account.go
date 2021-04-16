@@ -1,14 +1,13 @@
-package usecases
+package account
 
 import (
 	"errors"
 	"fmt"
-	"github.com/mp-hl-2021/code-swamp/internal/domain/repository"
+	account "github.com/mp-hl-2021/code-swamp/internal/domain/account"
+	"github.com/mp-hl-2021/code-swamp/internal/service/token"
 	"unicode"
 
 	"golang.org/x/crypto/bcrypt"
-
-	"time"
 )
 
 var (
@@ -23,6 +22,8 @@ var (
 
 	ErrInvalidLogin    = errors.New("login not found")
 	ErrInvalidPassword = errors.New("invalid password")
+
+	ErrInvalidLanguage = errors.New("language is invalid")
 )
 
 const (
@@ -36,28 +37,19 @@ type Account struct {
 	Id uint
 }
 
-type CodeSnippet struct {
-	Code     string
-	Lang     *string
-	Lifetime time.Duration
-}
-
-type AccountInterface interface {
+type Interface interface {
 	CreateAccount(login, password string) (Account, error)
 	LoginToAccount(login, password string) (string, error)
 
-	GetMyLinks(a Account) ([]string, error)
-	CreateSnippet(a *Account, code string, lang *string, lifetime time.Duration) (string, error)
-	GetSnippetById(string) (CodeSnippet, error)
 	GetAccountByToken(string) (Account, error)
 }
 
-type User struct{
-	Auth           Interface
-	AccountStorage repository.Interface
+type UseCases struct {
+	Auth               token.Interface
+	AccountStorage     account.Interface
 }
 
-func (u*User) CreateAccount(login, password string) (Account, error) {
+func (u *UseCases) CreateAccount(login, password string) (Account, error) {
 	fmt.Printf("Register: %s %s\n", login, password)
 	if err := validateLogin(login); err != nil {
 		return Account{}, err
@@ -71,8 +63,8 @@ func (u*User) CreateAccount(login, password string) (Account, error) {
 		return Account{}, err
 	}
 
-	acc, err := u.AccountStorage.CreateAccount(repository.Credentials{
-		Login: login,
+	acc, err := u.AccountStorage.CreateAccount(account.Credentials{
+		Login:    login,
 		Password: string(hashedPassword),
 	})
 	if err != nil {
@@ -81,7 +73,7 @@ func (u*User) CreateAccount(login, password string) (Account, error) {
 	return Account{Id: acc.Id}, nil
 }
 
-func (u*User) LoginToAccount(login, password string) (string, error) {
+func (u *UseCases) LoginToAccount(login, password string) (string, error) {
 	fmt.Printf("Login: %s %s\n", login, password)
 	if err := validateLogin(login); err != nil {
 		return "", err
@@ -102,25 +94,7 @@ func (u*User) LoginToAccount(login, password string) (string, error) {
 	return token, err
 }
 
-func (User) GetMyLinks(a Account) ([]string, error) {
-	// TODO
-	fmt.Printf("GetMyLinks: %s", a.Id)
-	return []string{"a", "b", "c"}, nil
-}
-
-func (User) CreateSnippet(a *Account, code string, lang *string, lifetime time.Duration) (string, error) {
-	// TODO
-	fmt.Printf("CreateLink: %s %s", a.Id, code)
-	return "id", nil
-}
-
-func (User) GetSnippetById(id string) (CodeSnippet, error) {
-	// TODO
-	fmt.Printf("GetSnippetById: %s", id)
-	return CodeSnippet{Code: "code"}, nil
-}
-
-func (u User) GetAccountByToken(token string) (Account, error)  {
+func (u UseCases) GetAccountByToken(token string) (Account, error) {
 	id, err := u.Auth.UserIdByToken(token)
 	if err != nil {
 		return Account{}, err
