@@ -1,11 +1,13 @@
 package main
 
 import (
+	"database/sql"
 	"flag"
 	"fmt"
+	_ "github.com/lib/pq"
 	"github.com/mp-hl-2021/code-swamp/internal/interface/httpapi"
-	"github.com/mp-hl-2021/code-swamp/internal/interface/memory/accountrepo"
 	"github.com/mp-hl-2021/code-swamp/internal/interface/memory/codesnippetrepo"
+	"github.com/mp-hl-2021/code-swamp/internal/interface/postgres/accountrepo"
 	"github.com/mp-hl-2021/code-swamp/internal/service/token"
 	"github.com/mp-hl-2021/code-swamp/internal/usecases/account"
 	"github.com/mp-hl-2021/code-swamp/internal/usecases/codesnippet"
@@ -27,8 +29,17 @@ func main() {
 		panic(err)
 	}
 
+	connStr := "user=postgres password=12345 host=db dbname=postgres sslmode=disable"
+
+	conn, err := sql.Open("postgres", connStr)
+
+	if err != nil {
+		panic(err)
+	}
+	defer conn.Close()
+
 	accountUseCases := &account.UseCases{
-		AccountStorage: accountrepo.NewMemory(),
+		AccountStorage: accountrepo.New(conn),
 		Auth:           a,
 	}
 
@@ -38,7 +49,7 @@ func main() {
 
 	service := httpapi.NewApi(accountUseCases, codeSnippetUseCases)
 
-	addr := "localhost:8080"
+	addr := ":8080"
 	server := http.Server{
 		Addr:         addr,
 		ReadTimeout:  10 * time.Second,
