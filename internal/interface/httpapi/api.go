@@ -4,8 +4,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/gorilla/mux"
+	repository "github.com/mp-hl-2021/code-swamp/internal/domain/account"
 	"github.com/mp-hl-2021/code-swamp/internal/interface/memory/codesnippetrepo"
 	"github.com/mp-hl-2021/code-swamp/internal/usecases/account"
+
 	"github.com/mp-hl-2021/code-swamp/internal/usecases/codesnippet"
 	"net/http"
 	"strconv"
@@ -64,7 +66,8 @@ func (a *Api) postSignup(w http.ResponseWriter, r *http.Request) {
 			account.ErrTooLongString,
 			account.ErrNoDigits,
 			account.ErrNoUpperCaseLetters,
-			account.ErrNoLowerCaseLetters:
+			account.ErrNoLowerCaseLetters,
+			repository.ErrAlreadyExist:
 
 			statusCode = http.StatusBadRequest
 		default:
@@ -135,7 +138,7 @@ func (a *Api) postLinks(w http.ResponseWriter, r *http.Request) {
 		Links: make([]string, len(ss)),
 	}
 	for i := range ss {
-		mm.Links[i] = fmt.Sprintf("/%d", ss[i])
+		mm.Links[i] = fmt.Sprintf("/toad/%d", ss[i])
 	}
 	if err := json.NewEncoder(w).Encode(mm); err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
@@ -182,7 +185,7 @@ func (a *Api) postCode(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	location := fmt.Sprintf("/%d", id)
+	location := fmt.Sprintf("/toad/%d", id)
 	w.Header().Set("Location", location)
 	w.WriteHeader(http.StatusCreated)
 }
