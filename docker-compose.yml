@@ -10,11 +10,13 @@ services:
     ports:
       - 8080:8080
     volumes:
-      - ./app.rsa:/app.rsa
-      - ./app.rsa.pub:/app.rsa.pub
+      - .\app.rsa:/app.rsa
+      - .\app.rsa.pub:/app.rsa.pub
   db:
     image: postgres
     environment:
-      POSTGRESS_PASSWORD: 12345
+      # POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: 12345
+      # POSTGRES_DB: postgres
     volumes:
-      - ./initdb.sql:/docker-entrypoint-initdb.d/initdb.sql
+      - .\initdb.sql:/docker-entrypoint-initdb.d/initdb.sql

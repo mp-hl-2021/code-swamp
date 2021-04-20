@@ -1,4 +1,4 @@
---DROP TABLE IF EXISTS accounts CASCADE;
+drop table if exists accounts cascade ;
 create table accounts
 (
     id        serial primary key,
@@ -8,4 +8,15 @@ create table accounts
     updatedAt timestamp without time zone default now(),
 
     unique (login)
+);
+
+drop table if exists snippets cascade;
+create table snippets
+(
+    id        serial primary key,
+    code      varchar not null,
+    uid       int,
+    language  varchar(64),
+    lifetime  interval not null,
+    createdAt timestamp without time zone default now()
 );

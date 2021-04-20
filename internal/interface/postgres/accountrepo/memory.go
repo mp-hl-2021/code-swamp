@@ -18,14 +18,18 @@ const queryCreateAccount = `
 		login,
 		password
 	) VALUES ($1, $2)
+	ON CONFLICT DO NOTHING
 	RETURNING id
 `
 
-func (p Postgres) CreateAccount(cred account.Credentials) (account.Account, error) {
+func (p *Postgres) CreateAccount(cred account.Credentials) (account.Account, error) {
 	a := account.Account{Credentials : cred}
 	row := p.conn.QueryRow(queryCreateAccount, cred.Login, cred.Password)
 	err := row.Scan(&a.Id)
-	if err != nil && err == sql.ErrNoRows { //todo
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return account.Account{}, account.ErrAlreadyExist
+		}
 		return account.Account{}, err
 	}
 	return a, nil
@@ -40,11 +44,14 @@ const queryGetAccountById = `
 	WHERE id = $1
 `
 
-func (p Postgres) GetAccountById(id uint) (account.Account, error) {
+func (p *Postgres) GetAccountById(id uint) (account.Account, error) {
 	a := account.Account{}
 	row := p.conn.QueryRow(queryGetAccountById, id)
 	err := row.Scan(&a.Id, &a.Login, &a.Password)
-	if err != nil && err == sql.ErrNoRows { //todo
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return account.Account{}, account.ErrNotFound
+		}
 		return account.Account{}, err
 	}
 	return a, nil
@@ -59,14 +66,14 @@ const queryGetAccountByLogin = `
 	WHERE login = $1
 `
 
-func (p Postgres) GetAccountByLogin(login string) (account.Account, error) {
+func (p *Postgres) GetAccountByLogin(login string) (account.Account, error) {
 	a := account.Account{}
-	row := p.conn.QueryRow(queryGetAccountById, login)
+	row := p.conn.QueryRow(queryGetAccountByLogin, login)
 	err := row.Scan(&a.Id, &a.Login, &a.Password)
-	if err != nil && err == sql.ErrNoRows { //todo
-		return account.Account{}, err
-	}
-	if err != nil { //todo
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return account.Account{}, account.ErrNotFound
+		}
 		return account.Account{}, err
 	}
 	return a, nil

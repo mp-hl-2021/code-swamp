@@ -6,7 +6,7 @@ import (
 	"fmt"
 	_ "github.com/lib/pq"
 	"github.com/mp-hl-2021/code-swamp/internal/interface/httpapi"
-	"github.com/mp-hl-2021/code-swamp/internal/interface/memory/codesnippetrepo"
+	"github.com/mp-hl-2021/code-swamp/internal/interface/postgres/codesnippetrepo"
 	"github.com/mp-hl-2021/code-swamp/internal/interface/postgres/accountrepo"
 	"github.com/mp-hl-2021/code-swamp/internal/service/token"
 	"github.com/mp-hl-2021/code-swamp/internal/usecases/account"
@@ -29,6 +29,7 @@ func main() {
 		panic(err)
 	}
 
+	// TODO: pass arguments with config
 	connStr := "user=postgres password=12345 host=db dbname=postgres sslmode=disable"
 
 	conn, err := sql.Open("postgres", connStr)
@@ -44,7 +45,7 @@ func main() {
 	}
 
 	codeSnippetUseCases := &codesnippet.UseCases{
-		CodeSnippetStorage: codesnippetrepo.NewMemory(),
+		CodeSnippetStorage: codesnippetrepo.New(conn),
 	}
 
 	service := httpapi.NewApi(accountUseCases, codeSnippetUseCases)
