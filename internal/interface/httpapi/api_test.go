@@ -109,7 +109,7 @@ func invalidJsonTest(router http.Handler, path string) *httptest.ResponseRecorde
 }
 
 func makeSignupRequest(t *testing.T, router http.Handler, login, password string) *httptest.ResponseRecorder {
-	m := postSignupRequestModel{
+	m := PostSignupRequestModel{
 		Login:    login,
 		Password: password,
 	}
@@ -125,7 +125,7 @@ func makeSignupRequest(t *testing.T, router http.Handler, login, password string
 }
 
 func makeSigninRequest(t *testing.T, router http.Handler, login, password string) *httptest.ResponseRecorder {
-	m := postSignupRequestModel{
+	m := PostSignupRequestModel{
 		Login:    login,
 		Password: password,
 	}
@@ -152,7 +152,7 @@ func makeGetLinksRequest(t *testing.T, router http.Handler, token string) *httpt
 
 func makePostCodeRequest(t *testing.T, router http.Handler, token, code, lang string) *httptest.ResponseRecorder {
 	d, _ := time.ParseDuration("12h")
-	m := postCodeRequestModel{
+	m := PostCodeRequestModel{
 		Code:     code,
 		Lang:     lang,
 		Lifetime: d,
