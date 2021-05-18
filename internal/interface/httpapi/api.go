@@ -6,15 +6,19 @@ import (
 	"github.com/gorilla/mux"
 	repository "github.com/mp-hl-2021/code-swamp/internal/domain/account"
 	"github.com/mp-hl-2021/code-swamp/internal/interface/memory/codesnippetrepo"
+	"github.com/mp-hl-2021/code-swamp/internal/interface/prom"
 	"github.com/mp-hl-2021/code-swamp/internal/usecases/account"
-
 	"github.com/mp-hl-2021/code-swamp/internal/usecases/codesnippet"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"net/http"
 	"strconv"
 	"time"
 )
 
-const snippetIdUrlPathKey = "snippet_id"
+const (
+	accountIdContextKey = "account_id"
+	snippetIdUrlPathKey = "snippet_id"
+)
 
 type Api struct {
 	AccountUseCases     account.Interface
@@ -31,24 +35,29 @@ func NewApi(a account.Interface, c codesnippet.Interface) *Api {
 func (a *Api) Router() http.Handler {
 	router := mux.NewRouter()
 
+	router.Use(prom.Measurer())
+	router.Use(a.logger)
+
 	router.HandleFunc("/signup", a.postSignup).Methods(http.MethodPost)
 	router.HandleFunc("/signin", a.postSignin).Methods(http.MethodPost)
 
-	router.HandleFunc("/myswamp", a.postLinks).Methods(http.MethodPost)
-	router.HandleFunc("/", a.postCode).Methods(http.MethodPost)
+	router.HandleFunc("/myswamp", a.authenticate(a.postLinks)).Methods(http.MethodPost)
+	router.HandleFunc("/", a.authenticateOrNot(a.postCode)).Methods(http.MethodPost)
 
 	router.HandleFunc("/toad/{"+snippetIdUrlPathKey+"}", a.getCode).Methods(http.MethodGet)
+
+	router.Handle("/metrics", promhttp.Handler())
 
 	return router
 }
 
-type postSignupRequestModel struct {
+type PostSignupRequestModel struct {
 	Login    string `json:"login"`
 	Password string `json:"password"`
 }
 
 func (a *Api) postSignup(w http.ResponseWriter, r *http.Request) {
-	var m postSignupRequestModel
+	var m PostSignupRequestModel
 	if err := json.NewDecoder(r.Body).Decode(&m); err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		return
@@ -82,7 +91,7 @@ func (a *Api) postSignup(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *Api) postSignin(w http.ResponseWriter, r *http.Request) {
-	var m postSignupRequestModel
+	var m PostSignupRequestModel
 	if err := json.NewDecoder(r.Body).Decode(&m); err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		return
@@ -106,24 +115,22 @@ func (a *Api) postSignin(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/jwt")
-	w.Write([]byte(token))
+	if _, err = w.Write([]byte(token)); err != nil {
+		return
+	}
 }
 
-type postLinksRequestModel struct {
-	Token string `json:"token"`
-}
-
-type postLinksResponseModel struct {
+type PostLinksResponseModel struct {
 	Links []string `json:"links"`
 }
 
 func (a *Api) postLinks(w http.ResponseWriter, r *http.Request) {
-	var m postLinksRequestModel
-	if err := json.NewDecoder(r.Body).Decode(&m); err != nil {
-		w.WriteHeader(http.StatusBadRequest)
+	aid, ok := r.Context().Value(accountIdContextKey).(uint)
+	if !ok {
+		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-	acc, err := a.AccountUseCases.GetAccountByToken(m.Token)
+	acc, err := a.AccountUseCases.GetAccountById(aid)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		return
@@ -134,7 +141,7 @@ func (a *Api) postLinks(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-	mm := postLinksResponseModel{
+	mm := PostLinksResponseModel{
 		Links: make([]string, len(ss)),
 	}
 	for i := range ss {
@@ -146,23 +153,22 @@ func (a *Api) postLinks(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-type postCodeRequestModel struct {
-	Token    string        `json:"token"`
+type PostCodeRequestModel struct {
 	Code     string        `json:"code"`
 	Lang     string        `json:"lang"`
 	Lifetime time.Duration `json:"lifetime"`
 }
 
 func (a *Api) postCode(w http.ResponseWriter, r *http.Request) {
-	var m postCodeRequestModel
+	var m PostCodeRequestModel
 	if err := json.NewDecoder(r.Body).Decode(&m); err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
-
 	var acc *account.Account = nil
-	if m.Token != "" {
-		a, err := a.AccountUseCases.GetAccountByToken(m.Token)
+	aid, ok := r.Context().Value(accountIdContextKey).(uint)
+	if ok {
+		a, err := a.AccountUseCases.GetAccountById(aid)
 		acc = &a
 		if err != nil {
 			w.WriteHeader(http.StatusBadRequest)
@@ -182,6 +188,7 @@ func (a *Api) postCode(w http.ResponseWriter, r *http.Request) {
 			statusCode = http.StatusInternalServerError
 		}
 		w.WriteHeader(statusCode)
+		fmt.Println(err)
 		return
 	}
 
@@ -218,5 +225,7 @@ func (a *Api) getCode(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Header().Set("Content-Type", "text/plain")
-	w.Write([]byte(ss.Code))
+	if _, err = w.Write([]byte(ss.Code)); err != nil {
+		return
+	}
 }

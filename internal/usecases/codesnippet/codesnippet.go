@@ -32,10 +32,11 @@ func (u *UseCases) GetMySnippetIds(a account.Account) ([]uint, error) {
 }
 
 func (u *UseCases) CreateSnippet(a *account.Account, code string, lang string, lifetime time.Duration) (uint, error) {
-	if err := u.CodeSnippetStorage.DeleteExpiredSnippets(); err != nil {
-		return 0, err
+	shortenedCode := code
+	if len(code) > 10 {
+		shortenedCode = code[:10] + "..."
 	}
-	fmt.Printf("CreateSnippet: %s\n", code)
+	fmt.Printf("CreateSnippet: %s\n", shortenedCode)
 	if lang != "" {
 		if err := validateLanguage(lang); err != nil {
 			return 0, err
@@ -69,10 +70,10 @@ func (u *UseCases) GetSnippetById(id uint) (codesnippet.CodeSnippet, error) {
 	return u.CodeSnippetStorage.GetCodeSnippetById(id)
 }
 
-var supportedLanguages = []string{"Python", "JavaScript", "Java", "Kotlin", "C#", "C", "C++", "PHP", "Swift", "Go", "Rust", "PETOOH"}
+var SupportedLanguages = []string{"Python", "JavaScript", "Java", "Kotlin", "C#", "C", "C++", "PHP", "Swift", "Go", "Rust", "PETOOH"}
 
 func validateLanguage(lang string) error {
-	for _, l := range supportedLanguages {
+	for _, l := range SupportedLanguages {
 		if strings.ToLower(lang) == strings.ToLower(l) {
 			return nil
 		}

@@ -41,7 +41,8 @@ type Interface interface {
 	CreateAccount(login, password string) (Account, error)
 	LoginToAccount(login, password string) (string, error)
 
-	GetAccountByToken(string) (Account, error)
+	GetAccountById(id uint) (Account, error)
+	Authenticate(token string) (uint, error)
 }
 
 type UseCases struct {
@@ -94,13 +95,16 @@ func (u *UseCases) LoginToAccount(login, password string) (string, error) {
 	return token, err
 }
 
-func (u UseCases) GetAccountByToken(token string) (Account, error) {
-	id, err := u.Auth.UserIdByToken(token)
+func (a *UseCases) GetAccountById(id uint) (Account, error) {
+	acc, err := a.AccountStorage.GetAccountById(id)
 	if err != nil {
 		return Account{}, err
 	}
-	wAcc, err := u.AccountStorage.GetAccountById(id)
-	return Account{wAcc.Id}, err
+	return Account{Id: acc.Id}, err
+}
+
+func (a *UseCases) Authenticate(token string) (uint, error) {
+	return a.Auth.UserIdByToken(token)
 }
 
 func validateLogin(login string) error {

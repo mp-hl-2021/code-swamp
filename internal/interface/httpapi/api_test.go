@@ -77,6 +77,23 @@ func (AccountFake) GetAccountByToken(token string) (account.Account, error) {
 	return account.Account{}, errors.New("invalid token claims")
 }
 
+func (AccountFake) Authenticate(token string) (uint, error) {
+	if token == "correct" {
+		return 1, nil
+	}
+	if token == "internal" {
+		return 100, nil
+	}
+	return 0, errors.New("invalid token claims")
+}
+
+func (AccountFake) GetAccountById(id uint) (account.Account, error) {
+	if id == 1 || id == 100 {
+		return account.Account{Id: id}, nil
+	}
+	return account.Account{}, errors.New("invalid token claims")
+}
+
 func assertStatusCode(t *testing.T, expectedCode, actualCode int) {
 	if expectedCode != actualCode {
 		t.Errorf("Server MUST return %d (%s) status code, but %d (%s) given",
@@ -92,7 +109,7 @@ func invalidJsonTest(router http.Handler, path string) *httptest.ResponseRecorde
 }
 
 func makeSignupRequest(t *testing.T, router http.Handler, login, password string) *httptest.ResponseRecorder {
-	m := postSignupRequestModel{
+	m := PostSignupRequestModel{
 		Login:    login,
 		Password: password,
 	}
@@ -108,7 +125,7 @@ func makeSignupRequest(t *testing.T, router http.Handler, login, password string
 }
 
 func makeSigninRequest(t *testing.T, router http.Handler, login, password string) *httptest.ResponseRecorder {
-	m := postSignupRequestModel{
+	m := PostSignupRequestModel{
 		Login:    login,
 		Password: password,
 	}
@@ -124,14 +141,9 @@ func makeSigninRequest(t *testing.T, router http.Handler, login, password string
 }
 
 func makeGetLinksRequest(t *testing.T, router http.Handler, token string) *httptest.ResponseRecorder {
-	m := postLinksRequestModel{
-		Token: token,
-	}
-	b, err := json.Marshal(m)
-	if err != nil {
-		t.Fatal("failed to marshal struct")
-	}
-	req := httptest.NewRequest(http.MethodPost, "/myswamp", bytes.NewReader(b))
+	req := httptest.NewRequest(http.MethodPost, "/myswamp", nil)
+	req.Header.Add("Authorization", "Bearer " + token)
+
 	resp := httptest.NewRecorder()
 
 	router.ServeHTTP(resp, req)
@@ -140,8 +152,7 @@ func makeGetLinksRequest(t *testing.T, router http.Handler, token string) *httpt
 
 func makePostCodeRequest(t *testing.T, router http.Handler, token, code, lang string) *httptest.ResponseRecorder {
 	d, _ := time.ParseDuration("12h")
-	m := postCodeRequestModel{
-		Token:    token,
+	m := PostCodeRequestModel{
 		Code:     code,
 		Lang:     lang,
 		Lifetime: d,
@@ -151,6 +162,9 @@ func makePostCodeRequest(t *testing.T, router http.Handler, token, code, lang st
 		t.Fatal("failed to marshal struct")
 	}
 	req := httptest.NewRequest(http.MethodPost, "/", bytes.NewReader(b))
+	if token != "" {
+		req.Header.Add("Authorization", "Bearer "+token)
+	}
 	resp := httptest.NewRecorder()
 
 	router.ServeHTTP(resp, req)
@@ -221,7 +235,7 @@ func Test_postLinks(t *testing.T) {
 	})
 	t.Run("failed to get links with incorrect token", func(t *testing.T) {
 		resp := makeGetLinksRequest(t, router, "incorrect")
-		assertStatusCode(t, http.StatusBadRequest, resp.Code)
+		assertStatusCode(t, http.StatusUnauthorized, resp.Code)
 	})
 	t.Run("failed to get links for existing user", func(t *testing.T) {
 		resp := makeGetLinksRequest(t, router, "internal")
@@ -243,7 +257,7 @@ func Test_postCode(t *testing.T) {
 	})
 	t.Run("failed to post code with invalid token", func(t *testing.T) {
 		resp := makePostCodeRequest(t, router, "incorrect", "",  "")
-		assertStatusCode(t, http.StatusBadRequest, resp.Code)
+		assertStatusCode(t, http.StatusUnauthorized, resp.Code)
 	})
 	t.Run("failed to post code with invalid language", func(t *testing.T) {
 		resp := makePostCodeRequest(t, router, "correct", "KoKoKoKoKoKoKoKoKoKo Kud-Kudah", "petooh")
