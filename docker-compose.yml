@@ -1,4 +1,4 @@
-version: '3.1'
+version: '2.0'
 services:
   server:
     build:
@@ -25,4 +25,4 @@ services:
     ports:
       - 9090:9090
     volumes:
-      - .\prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml

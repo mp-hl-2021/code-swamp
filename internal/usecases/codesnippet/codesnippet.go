@@ -32,7 +32,11 @@ func (u *UseCases) GetMySnippetIds(a account.Account) ([]uint, error) {
 }
 
 func (u *UseCases) CreateSnippet(a *account.Account, code string, lang string, lifetime time.Duration) (uint, error) {
-	fmt.Printf("CreateSnippet: %s...\n", code[:10])
+	shortenedCode := code
+	if len(code) > 10 {
+		shortenedCode = code[:10] + "..."
+	}
+	fmt.Printf("CreateSnippet: %s\n", shortenedCode)
 	if lang != "" {
 		if err := validateLanguage(lang); err != nil {
 			return 0, err

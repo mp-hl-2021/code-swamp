@@ -35,6 +35,9 @@ func NewApi(a account.Interface, c codesnippet.Interface) *Api {
 func (a *Api) Router() http.Handler {
 	router := mux.NewRouter()
 
+	router.Use(prom.Measurer())
+	router.Use(a.logger)
+
 	router.HandleFunc("/signup", a.postSignup).Methods(http.MethodPost)
 	router.HandleFunc("/signin", a.postSignin).Methods(http.MethodPost)
 
@@ -45,7 +48,6 @@ func (a *Api) Router() http.Handler {
 
 	router.Handle("/metrics", promhttp.Handler())
 
-	router.Use(prom.Measurer())
 	return router
 }
 
@@ -113,7 +115,9 @@ func (a *Api) postSignin(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/jwt")
-	w.Write([]byte(token))
+	if _, err = w.Write([]byte(token)); err != nil {
+		return
+	}
 }
 
 type PostLinksResponseModel struct {
@@ -221,5 +225,7 @@ func (a *Api) getCode(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Header().Set("Content-Type", "text/plain")
-	w.Write([]byte(ss.Code))
+	if _, err = w.Write([]byte(ss.Code)); err != nil {
+		return
+	}
 }

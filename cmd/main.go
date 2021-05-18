@@ -6,8 +6,8 @@ import (
 	"fmt"
 	_ "github.com/lib/pq"
 	"github.com/mp-hl-2021/code-swamp/internal/interface/httpapi"
-	"github.com/mp-hl-2021/code-swamp/internal/interface/postgres/codesnippetrepo"
 	"github.com/mp-hl-2021/code-swamp/internal/interface/postgres/accountrepo"
+	"github.com/mp-hl-2021/code-swamp/internal/interface/postgres/codesnippetrepo"
 	"github.com/mp-hl-2021/code-swamp/internal/service/token"
 	"github.com/mp-hl-2021/code-swamp/internal/usecases/account"
 	"github.com/mp-hl-2021/code-swamp/internal/usecases/codesnippet"
@@ -37,7 +37,12 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	defer conn.Close()
+	defer func(conn *sql.DB) {
+		err := conn.Close()
+		if err != nil {
+			panic(err)
+		}
+	}(conn)
 
 	accountUseCases := &account.UseCases{
 		AccountStorage: accountrepo.New(conn),
