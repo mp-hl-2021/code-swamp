@@ -5,6 +5,9 @@ import (
 	"fmt"
 	"github.com/mp-hl-2021/code-swamp/internal/domain/codesnippet"
 	"github.com/mp-hl-2021/code-swamp/internal/usecases/account"
+	"io/ioutil"
+	"os"
+	"os/exec"
 	"strings"
 	"time"
 )
@@ -32,7 +35,21 @@ type UseCases struct {
 }
 
 func (u *UseCases) CheckCode(code string, lang string) (CodeCheckResult, error) {
-	// что-то гениальное
+
+	file, err := ioutil.TempFile("", "tmp")
+	if err != nil {
+		return CodeCheckResult{}, errors.New("failed to create temporary file")
+	}
+	defer os.Remove(file.Name())
+	_, err = file.Write([]byte(code))
+	if err != nil {
+		return CodeCheckResult{}, errors.New("failed to write to temporary file")
+	}
+	output, err := exec.Command("dupl", "-t", "100", file.Name()).Output()
+	if err != nil {
+		return CodeCheckResult{}, errors.New("failed to run dupl on file")
+	}
+	return CodeCheckResult{correct: true, msg: string(output)}, nil
 }
 
 func (u *UseCases) SetIncorrectCode(r CodeCheckResult, err error, sid uint) error {
