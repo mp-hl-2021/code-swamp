@@ -5,9 +5,12 @@ import (
 )
 
 type CodeSnippet struct {
-	Code     string
-	Lang     string
-	Lifetime time.Duration
+	Code      string
+	Lang      string
+	IsChecked bool
+	IsCorrect bool
+	Message   string
+	Lifetime  time.Duration
 }
 
 type Interface interface {
@@ -16,4 +19,5 @@ type Interface interface {
 	GetCodeSnippetById(sid uint) (CodeSnippet, error)
 	GetMyCodeSnippetIds(uid uint) ([]uint, error)
 	DeleteExpiredSnippets() error
+	SetCodeStatus(sid uint, status bool, msg string) error
 }

@@ -53,7 +53,8 @@ func main() {
 		CodeSnippetStorage: codesnippetrepo.New(conn),
 	}
 
-	service := httpapi.NewApi(accountUseCases, codeSnippetUseCases)
+	ch := make(chan httpapi.CodeCheckResult)
+	service := httpapi.NewApi(accountUseCases, codeSnippetUseCases, ch)
 
 	addr := ":8080"
 	server := http.Server{

@@ -18,5 +18,7 @@ create table snippets
     uid       int,
     language  varchar(64),
     lifetime  interval not null,
-    createdAt timestamp without time zone default now()
+    createdAt timestamp without time zone default now(),
+    isChecked bool not null,
+    isCorrect bool not null
 );

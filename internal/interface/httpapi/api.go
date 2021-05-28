@@ -225,7 +225,13 @@ func (a *Api) getCode(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Header().Set("Content-Type", "text/plain")
-	if _, err = w.Write([]byte(ss.Code)); err != nil {
-		return
+	status := ""
+	if !ss.IsChecked {
+		status = "Not checked yet"
+	} else if ss.IsCorrect {
+		status = "Correct"
+	} else {
+		status = "Incorrect"
 	}
+	w.Write([]byte("Status:" + status + ", Code: " + ss.Code))
 }

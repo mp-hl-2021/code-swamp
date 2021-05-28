@@ -13,14 +13,37 @@ var (
 	ErrorUnsupportedLanguage = errors.New("unsupported language")
 )
 
+type CodeCheckResult struct {
+	correct bool
+	msg     string
+}
+
 type Interface interface {
 	GetMySnippetIds(a account.Account) ([]uint, error)
 	CreateSnippet(a *account.Account, code string, lang string, lifetime time.Duration) (uint, error)
 	GetSnippetById(uint) (codesnippet.CodeSnippet, error)
+	CheckCode(code string, lang string) (CodeCheckResult, error)
+	SetIncorrectCode(r CodeCheckResult, err error, sid uint) error
 }
 
 type UseCases struct {
 	CodeSnippetStorage codesnippet.Interface
+	CodeCheckChannel   chan<- CodeCheckResult
+}
+
+func (u *UseCases) CheckCode(code string, lang string) (CodeCheckResult, error) {
+	// что-то гениальное
+}
+
+func (u *UseCases) SetIncorrectCode(r CodeCheckResult, err error, sid uint) error {
+	if err != nil {
+		u.CodeSnippetStorage.SetCodeStatus(sid, false, err.Error())
+	} else if !r.correct {
+		u.CodeSnippetStorage.SetCodeStatus(sid, false, r.msg)
+	} else {
+		u.CodeSnippetStorage.SetCodeStatus(sid, true, "")
+	}
+	return nil
 }
 
 func (u *UseCases) GetMySnippetIds(a account.Account) ([]uint, error) {
@@ -43,23 +66,34 @@ func (u *UseCases) CreateSnippet(a *account.Account, code string, lang string, l
 		}
 	}
 	s := codesnippet.CodeSnippet{
-		Code:     code,
-		Lang:     lang,
-		Lifetime: lifetime,
+		Code:      code,
+		Lang:      lang,
+		IsChecked: false,
+		IsCorrect: false,
+		Lifetime:  lifetime,
 	}
+	var sid uint
+	var err error
 	if a == nil {
-		sid, err := u.CodeSnippetStorage.CreateCodeSnippet(s)
+		sid, err = u.CodeSnippetStorage.CreateCodeSnippet(s)
 		if err != nil {
 			return 0, err
 		}
-		return sid, nil
 	} else {
-		sid, err := u.CodeSnippetStorage.CreateCodeSnippetWithUser(s, a.Id)
+		sid, err = u.CodeSnippetStorage.CreateCodeSnippetWithUser(s, a.Id)
 		if err != nil {
 			return 0, err
 		}
-		return sid, nil
 	}
+	go func() {
+		r, err := u.CheckCode(code, lang)
+		if err != nil || r.correct {
+			if err := u.SetIncorrectCode(r, err, sid); err != nil {
+				fmt.Printf("Falied to set code status: %s\n", err)
+			}
+		}
+	}()
+	return sid, nil
 }
 
 func (u *UseCases) GetSnippetById(id uint) (codesnippet.CodeSnippet, error) {
