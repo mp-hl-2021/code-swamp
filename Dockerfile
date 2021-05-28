@@ -3,9 +3,10 @@ RUN mkdir /build
 ADD . /build/
 WORKDIR /build
 RUN CGO_ENABLED=0 GOOS=linux go build -a -o code-swamp-server cmd/main.go
+RUN go get github.com/mibk/dupl/...
 
 FROM alpine:3.13
-COPY --from=builder /build/code-swamp-server .
+COPY --from=builder /go/bin/dupl /go/bin/dupl
+COPY --from=builder /build /build
 
-CMD [ "go get -u github.com/mibk/dupl" ]
-ENTRYPOINT  [ "./code-swamp-server" ]
+ENTRYPOINT  [ "./build/code-swamp-server" ]

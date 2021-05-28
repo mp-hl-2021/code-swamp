@@ -44,7 +44,7 @@ func RunLinter(code string, lang string) (string, error) {
 	if err != nil {
 		return "", errors.New("failed to write to temporary file: " + err.Error())
 	}
-	output, err := exec.Command("dupl", "-t", "100", file.Name()).Output()
+	output, err := exec.Command("./go/bin/dupl", "-t", "100", file.Name()).Output()
 	if err != nil {
 		return "", errors.New("failed to run dupl on file: " + err.Error())
 	}

@@ -57,7 +57,7 @@ func main() {
 	}
 
 	go func() {
-		for _ = range time.Tick(time.Minute) {
+		for _ = range time.Tick(time.Second) {
 			c := <-ch
 			fmt.Printf("Checking code sid: %d, code: %s, lang: %s\n", c.Sid, c.Code, c.Lang)
 			err := codeSnippetUseCases.CheckCode(c.Sid, c.Code, c.Lang)
