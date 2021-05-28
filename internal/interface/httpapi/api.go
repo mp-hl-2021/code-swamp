@@ -228,10 +228,8 @@ func (a *Api) getCode(w http.ResponseWriter, r *http.Request) {
 	status := ""
 	if !ss.IsChecked {
 		status = "Not checked yet"
-	} else if ss.IsCorrect {
-		status = "Correct"
 	} else {
-		status = "Incorrect"
+		status = ss.Message
 	}
 	w.Write([]byte("Status:" + status + ", Code: " + ss.Code))
 }

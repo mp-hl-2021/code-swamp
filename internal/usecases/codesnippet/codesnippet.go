@@ -16,11 +16,6 @@ var (
 	ErrorUnsupportedLanguage = errors.New("unsupported language")
 )
 
-type CodeCheckResult struct {
-	correct bool
-	msg     string
-}
-
 type CheckCodeRequest struct {
 	Sid  uint
 	Code string
@@ -39,38 +34,32 @@ type UseCases struct {
 	CodeCheckChannel   chan<- CheckCodeRequest
 }
 
-func RunLinter(code string, lang string) (CodeCheckResult, error) {
+func RunLinter(code string, lang string) (string, error) {
 	file, err := ioutil.TempFile("", "tmp")
 	if err != nil {
-		return CodeCheckResult{}, errors.New("failed to create temporary file")
+		return "", errors.New("failed to create temporary file: " + err.Error())
 	}
 	defer os.Remove(file.Name())
 	_, err = file.Write([]byte(code))
 	if err != nil {
-		return CodeCheckResult{}, errors.New("failed to write to temporary file")
+		return "", errors.New("failed to write to temporary file: " + err.Error())
 	}
 	output, err := exec.Command("dupl", "-t", "100", file.Name()).Output()
 	if err != nil {
-		return CodeCheckResult{}, errors.New("failed to run dupl on file")
+		return "", errors.New("failed to run dupl on file: " + err.Error())
 	}
-	return CodeCheckResult{correct: true, msg: string(output)}, nil
+	return string(output), nil
 }
 
 func (u *UseCases) CheckCode(sid uint, code string, lang string) error {
 	r, err := RunLinter(code, lang)
-	var status bool
 	var msg string
 	if err != nil {
-		status = false
 		msg = err.Error()
-	} else if !r.correct {
-		status = false
-		msg = r.msg
 	} else {
-		status = true
-		msg = ""
+		msg = r
 	}
-	return u.CodeSnippetStorage.SetCodeStatus(sid, status, msg)
+	return u.CodeSnippetStorage.SetCodeLinterMessage(sid, msg)
 }
 
 func (u *UseCases) GetMySnippetIds(a account.Account) ([]uint, error) {
@@ -96,7 +85,6 @@ func (u *UseCases) CreateSnippet(a *account.Account, code string, lang string, l
 		Code:      code,
 		Lang:      lang,
 		IsChecked: false,
-		IsCorrect: false,
 		Lifetime:  lifetime,
 	}
 	var sid uint

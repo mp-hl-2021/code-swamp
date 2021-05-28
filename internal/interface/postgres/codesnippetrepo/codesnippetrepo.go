@@ -20,27 +20,25 @@ const queryCreateSnippet = `
 		language,                 
 		lifetime,
 	    isChecked,
-		isCorrect,
 	    message
-	) VALUES ($1, $2, $3, $4, $5, $6)
+	) VALUES ($1, $2, $3, $4, $5)
 	RETURNING id
 `
 
-const querySetCodeStatus = `
+const querySetCodeLinterMessage = `
 	UPDATE snippets
 	SET isChecked = $2,
-	    isCorrect = $3,
-	    message = $4
+	    message = $3
 	WHERE snippets.id = $1
 `
 
-func (p *Postgres) SetCodeStatus(sid uint, status bool, msg string) error {
-	_, err := p.conn.Query(querySetCodeStatus, sid, true, status, msg)
+func (p *Postgres) SetCodeLinterMessage(sid uint, msg string) error {
+	_, err := p.conn.Query(querySetCodeLinterMessage, sid, true, msg)
 	return err
 }
 
 func (p *Postgres) CreateCodeSnippet(s codesnippet.CodeSnippet) (uint, error) {
-	row := p.conn.QueryRow(queryCreateSnippet, s.Code, s.Lang, s.Lifetime, s.IsChecked, s.IsCorrect, s.Message)
+	row := p.conn.QueryRow(queryCreateSnippet, s.Code, s.Lang, s.Lifetime, s.IsChecked, s.Message)
 	var id uint
 	err := row.Scan(&id)
 	if err != nil {
@@ -56,14 +54,13 @@ const queryCreateSnippetWithUser = `
 		language,
 		lifetime,
 		isChecked,
-	    isCorrect,
 	    message
-	) VALUES ($1, $2, $3, $4, $5, $6, $7)
+	) VALUES ($1, $2, $3, $4, $5, $6)
 	RETURNING id
 `
 
 func (p *Postgres) CreateCodeSnippetWithUser(s codesnippet.CodeSnippet, uid uint) (uint, error) {
-	row := p.conn.QueryRow(queryCreateSnippetWithUser, s.Code, uid, s.Lang, s.Lifetime, s.IsChecked, s.IsCorrect, s.Message)
+	row := p.conn.QueryRow(queryCreateSnippetWithUser, s.Code, uid, s.Lang, s.Lifetime, s.IsChecked, s.Message)
 	var id uint
 	err := row.Scan(&id)
 	if err != nil {
@@ -77,7 +74,6 @@ const queryGetCodeSnippetById = `
 		code,
 		language,
 	    isChecked,
-	    isCorrect,
 	    message
 	FROM snippets
 	WHERE id = $1
@@ -86,7 +82,7 @@ const queryGetCodeSnippetById = `
 func (p *Postgres) GetCodeSnippetById(sid uint) (codesnippet.CodeSnippet, error) {
 	cs := codesnippet.CodeSnippet{}
 	row := p.conn.QueryRow(queryGetCodeSnippetById, sid)
-	err := row.Scan(&cs.Code, &cs.Lang, &cs.IsChecked, &cs.IsCorrect, &cs.Message)
+	err := row.Scan(&cs.Code, &cs.Lang, &cs.IsChecked, &cs.Message)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return codesnippet.CodeSnippet{}, codesnippetrepo.ErrInvalidSnippedId

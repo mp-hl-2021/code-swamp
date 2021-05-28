@@ -57,18 +57,12 @@ func main() {
 	}
 
 	go func() {
-		for _ = range time.Tick(time.Second) {  // TODO: make Minute
-			for {
-				select {
-				case c := <-ch:
-					fmt.Printf("Checking code sid: %d, code: %s, lang: %s\n", c.Sid, c.Code, c.Lang)
-					err := codeSnippetUseCases.CheckCode(c.Sid, c.Code, c.Lang)
-					if err != nil {
-						fmt.Printf("Error checking code: %s\n", err)
-					}
-				default:
-					return
-				}
+		for _ = range time.Tick(time.Minute) {
+			c := <-ch
+			fmt.Printf("Checking code sid: %d, code: %s, lang: %s\n", c.Sid, c.Code, c.Lang)
+			err := codeSnippetUseCases.CheckCode(c.Sid, c.Code, c.Lang)
+			if err != nil {
+				fmt.Printf("Error checking code: %s\n", err)
 			}
 		}
 	}()

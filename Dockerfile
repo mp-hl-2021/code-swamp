@@ -7,4 +7,5 @@ RUN CGO_ENABLED=0 GOOS=linux go build -a -o code-swamp-server cmd/main.go
 FROM alpine:3.13
 COPY --from=builder /build/code-swamp-server .
 
+CMD [ "go get -u github.com/mibk/dupl" ]
 ENTRYPOINT  [ "./code-swamp-server" ]
