@@ -21,21 +21,25 @@ type CodeCheckResult struct {
 	msg     string
 }
 
+type CheckCodeRequest struct {
+	Sid  uint
+	Code string
+	Lang string
+}
+
 type Interface interface {
 	GetMySnippetIds(a account.Account) ([]uint, error)
 	CreateSnippet(a *account.Account, code string, lang string, lifetime time.Duration) (uint, error)
 	GetSnippetById(uint) (codesnippet.CodeSnippet, error)
-	CheckCode(code string, lang string) (CodeCheckResult, error)
-	SetIncorrectCode(r CodeCheckResult, err error, sid uint) error
+	CheckCode(sid uint, code string, lang string) error
 }
 
 type UseCases struct {
 	CodeSnippetStorage codesnippet.Interface
-	CodeCheckChannel   chan<- CodeCheckResult
+	CodeCheckChannel   chan<- CheckCodeRequest
 }
 
-func (u *UseCases) CheckCode(code string, lang string) (CodeCheckResult, error) {
-
+func RunLinter(code string, lang string) (CodeCheckResult, error) {
 	file, err := ioutil.TempFile("", "tmp")
 	if err != nil {
 		return CodeCheckResult{}, errors.New("failed to create temporary file")
@@ -52,15 +56,21 @@ func (u *UseCases) CheckCode(code string, lang string) (CodeCheckResult, error) 
 	return CodeCheckResult{correct: true, msg: string(output)}, nil
 }
 
-func (u *UseCases) SetIncorrectCode(r CodeCheckResult, err error, sid uint) error {
+func (u *UseCases) CheckCode(sid uint, code string, lang string) error {
+	r, err := RunLinter(code, lang)
+	var status bool
+	var msg string
 	if err != nil {
-		u.CodeSnippetStorage.SetCodeStatus(sid, false, err.Error())
+		status = false
+		msg = err.Error()
 	} else if !r.correct {
-		u.CodeSnippetStorage.SetCodeStatus(sid, false, r.msg)
+		status = false
+		msg = r.msg
 	} else {
-		u.CodeSnippetStorage.SetCodeStatus(sid, true, "")
+		status = true
+		msg = ""
 	}
-	return nil
+	return u.CodeSnippetStorage.SetCodeStatus(sid, status, msg)
 }
 
 func (u *UseCases) GetMySnippetIds(a account.Account) ([]uint, error) {
@@ -103,12 +113,7 @@ func (u *UseCases) CreateSnippet(a *account.Account, code string, lang string, l
 		}
 	}
 	go func() {
-		r, err := u.CheckCode(code, lang)
-		if err != nil || r.correct {
-			if err := u.SetIncorrectCode(r, err, sid); err != nil {
-				fmt.Printf("Falied to set code status: %s\n", err)
-			}
-		}
+		u.CodeCheckChannel <- CheckCodeRequest{sid, code, lang}
 	}()
 	return sid, nil
 }

@@ -44,6 +44,8 @@ func main() {
 		}
 	}(conn)
 
+	ch := make(chan codesnippet.CheckCodeRequest)
+
 	accountUseCases := &account.UseCases{
 		AccountStorage: accountrepo.New(conn),
 		Auth:           a,
@@ -51,10 +53,27 @@ func main() {
 
 	codeSnippetUseCases := &codesnippet.UseCases{
 		CodeSnippetStorage: codesnippetrepo.New(conn),
+		CodeCheckChannel:   ch,
 	}
 
-	ch := make(chan httpapi.CodeCheckResult)
-	service := httpapi.NewApi(accountUseCases, codeSnippetUseCases, ch)
+	go func() {
+		for _ = range time.Tick(time.Second) {  // TODO: make Minute
+			for {
+				select {
+				case c := <-ch:
+					fmt.Printf("Checking code sid: %d, code: %s, lang: %s\n", c.Sid, c.Code, c.Lang)
+					err := codeSnippetUseCases.CheckCode(c.Sid, c.Code, c.Lang)
+					if err != nil {
+						fmt.Printf("Error checking code: %s\n", err)
+					}
+				default:
+					return
+				}
+			}
+		}
+	}()
+
+	service := httpapi.NewApi(accountUseCases, codeSnippetUseCases)
 
 	addr := ":8080"
 	server := http.Server{
