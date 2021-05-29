@@ -34,8 +34,8 @@ type UseCases struct {
 	CodeCheckChannel   chan<- CheckCodeRequest
 }
 
-func RunLinter(code string, lang string) (string, error) {
-	file, err := ioutil.TempFile("", "tmp")
+func runLinter(code string) (string, error) {
+	file, err := ioutil.TempFile("", "tmp*.go")
 	if err != nil {
 		return "", errors.New("failed to create temporary file: " + err.Error())
 	}
@@ -44,7 +44,7 @@ func RunLinter(code string, lang string) (string, error) {
 	if err != nil {
 		return "", errors.New("failed to write to temporary file: " + err.Error())
 	}
-	output, err := exec.Command("./go/bin/dupl", "-t", "100", file.Name()).Output()
+	output, err := exec.Command("./go/bin/dupl", file.Name()).Output()
 	if err != nil {
 		return "", errors.New("failed to run dupl on file: " + err.Error())
 	}
@@ -52,12 +52,16 @@ func RunLinter(code string, lang string) (string, error) {
 }
 
 func (u *UseCases) CheckCode(sid uint, code string, lang string) error {
-	r, err := RunLinter(code, lang)
 	var msg string
-	if err != nil {
-		msg = err.Error()
+	if strings.ToLower(lang) != "go" {
+		msg = ""
 	} else {
-		msg = r
+		r, err := runLinter(code)
+		if err != nil {
+			msg = err.Error()
+		} else {
+			msg = r
+		}
 	}
 	return u.CodeSnippetStorage.SetCodeLinterMessage(sid, msg)
 }
