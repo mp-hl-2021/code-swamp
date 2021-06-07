@@ -47,6 +47,10 @@ func (CodeSnippetFake) GetMySnippetIds(a account.Account) ([]uint, error) {
 	return []uint{}, errors.New("failed to get links")
 }
 
+func (CodeSnippetFake) CheckCode(uint, string, string) error {
+	return nil
+}
+
 func (CodeSnippetFake) CreateSnippet(a *account.Account, code string, lang string, lifetime time.Duration) (uint, error) {
 	if lang == "petooh" {
 		return 0, account.ErrInvalidLanguage

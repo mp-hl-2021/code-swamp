@@ -1,4 +1,4 @@
-drop table if exists accounts cascade ;
+drop table if exists accounts cascade;
 create table accounts
 (
     id        serial primary key,
@@ -18,5 +18,7 @@ create table snippets
     uid       int,
     language  varchar(64),
     lifetime  interval not null,
-    createdAt timestamp without time zone default now()
+    createdAt timestamp without time zone default now(),
+    isChecked bool not null,
+    message   varchar not null
 );
